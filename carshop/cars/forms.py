@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from .models import Car, CarSpecification
+from .models import User
 
 class LoginForm(forms.Form):
     username = forms.CharField(
@@ -12,32 +13,34 @@ class LoginForm(forms.Form):
         widget=forms.PasswordInput(attrs={'class': 'w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'})
     )
 
-class RegisterForm(UserCreationForm):
-    email = forms.EmailField(
-        max_length=254,
-        required=True,
-        help_text='Введите действительный адрес электронной почты.',
-        widget=forms.EmailInput(attrs={'class': 'w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'})
-    )
+class RegistrationForm(forms.ModelForm):
+    password = forms.CharField(widget=forms.PasswordInput, label='Пароль')
+    confirm_password = forms.CharField(widget=forms.PasswordInput, label='Подтверждение пароля')
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password1', 'password2']
+        fields = ['username', 'email', 'phone', 'password']
+        labels = {
+            'username': 'Имя пользователя',
+            'email': 'Электронная почта',
+            'phone': 'Телефон',
+        }
 
-    def __init__(self, *args, **kwargs):
-        super(RegisterForm, self).__init__(*args, **kwargs)
-        self.fields['username'].widget.attrs.update({
-            'class': 'w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-        })
-        self.fields['email'].widget.attrs.update({
-            'class': 'w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-        })
-        self.fields['password1'].widget.attrs.update({
-            'class': 'w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-        })
-        self.fields['password2'].widget.attrs.update({
-            'class': 'w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-        })
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get('password')
+        confirm_password = cleaned_data.get('confirm_password')
+
+        if password and confirm_password and password != confirm_password:
+            raise forms.ValidationError('Пароли не совпадают.')
+        return cleaned_data
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.set_password(self.cleaned_data['password'])  # Хешируем пароль
+        if commit:
+            user.save()
+        return user
 
 class CarForm(forms.ModelForm):
     class Meta:
