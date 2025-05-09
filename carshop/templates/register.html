@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
-<div class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in">
+<div class="max-w-md mx-auto bg-white rounded-xl shadow-2xl p-6 md:p-8 fade-in">
     <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 text-center">Регистрация</h2>
     {% if messages %}
     {% for message in messages %}
@@ -10,7 +11,7 @@
     </div>
     {% endfor %}
     {% endif %}
-    <form method="post" class="space-y-4">
+    <form method="post" class="space-y-6">
         {% csrf_token %}
         <div>
             <label class="block text-gray-700 font-medium text-sm md:text-base">{{ form.username.label }}</label>
@@ -24,15 +25,55 @@
             <label class="block text-gray-700 font-medium text-sm md:text-base">{{ form.phone.label }}</label>
             {{ form.phone }}
         </div>
-        <div>
-            <label class="block text-gray-700 font-medium text-sm md:text-base">Пароль</label>
+        <div class="relative">
+            <label class="block text-gray-700 font-medium text-sm md:text-base">{{ form.password.label }}</label>
             {{ form.password }}
         </div>
-        <div>
-            <label class="block text-gray-700 font-medium text-sm md:text-base">Подтверждение пароля</label>
+        <div class="relative">
+            <label class="block text-gray-700 font-medium text-sm md:text-base">{{ form.confirm_password.label }}</label>
             {{ form.confirm_password }}
         </div>
-        <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-all text-sm md:text-base">Зарегистрироваться <i class="fas fa-user-plus ml-2"></i></button>
+        <button type="button" id="togglePasswordButton" class="w-full flex items-center justify-center bg-gray-300 text-gray-700 p-2 rounded-lg hover:bg-gray-400 transition-all text-sm md:text-base">
+            <i id="eyeIcon" class="fas fa-eye text-lg mr-2"></i>
+            <span id="toggleText">Показать пароль</span>
+        </button>
+        <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-all text-base md:text-lg shadow-md hover:shadow-lg">
+            Зарегистрироваться <i class="fas fa-user-plus ml-2 text-lg"></i>
+        </button>
     </form>
 </div>
+
+<style>
+    /* Отключаем встроенную иконку браузера для показа пароля */
+    input[type="password"]::-ms-reveal,
+    input[type="password"]::-ms-clear,
+    input[type="password"]::-webkit-textfield-decoration-container {
+        display: none !important;
+    }
+    input[type="password"] {
+        -webkit-appearance: none;
+        appearance: none;
+    }
+</style>
+
+<script>
+    document.getElementById('togglePasswordButton').addEventListener('click', function() {
+        const passwordInput = document.getElementById('id_password');
+        const confirmPasswordInput = document.getElementById('id_confirm_password');
+        const eyeIcon = document.getElementById('eyeIcon');
+        const toggleText = document.getElementById('toggleText');
+
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            confirmPasswordInput.type = 'text';
+            eyeIcon.className = 'fas fa-eye-slash text-lg mr-2';
+            toggleText.textContent = 'Скрыть пароль';
+        } else {
+            passwordInput.type = 'password';
+            confirmPasswordInput.type = 'password';
+            eyeIcon.className = 'fas fa-eye text-lg mr-2';
+            toggleText.textContent = 'Показать пароль';
+        }
+    });
+</script>
 {% endblock %}

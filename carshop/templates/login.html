@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
-<div class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in">
+<div class="max-w-md mx-auto bg-white rounded-xl shadow-2xl p-6 md:p-8 fade-in">
     <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 text-center">Вход</h2>
     {% if messages %}
     {% for message in messages %}
@@ -10,17 +11,38 @@
     </div>
     {% endfor %}
     {% endif %}
-    <form method="post" class="space-y-4">
+    <form method="post" class="space-y-6">
         {% csrf_token %}
         <div>
-            <label class="block text-gray-700 font-medium text-sm md:text-base">Имя пользователя</label>
-            <input type="text" name="username" required class="w-full p-2 border rounded">
+            <label for="username" class="block text-gray-700 font-medium text-sm md:text-base">Имя пользователя</label>
+            <input type="text" name="username" id="id_username" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base" placeholder="Введите имя пользователя" required>
         </div>
         <div class="relative">
-            <label class="block text-gray-700 font-medium text-sm md:text-base">Пароль</label>
-            <input type="password" name="password" required class="w-full p-2 border rounded">
+            <label for="password" class="block text-gray-700 font-medium text-sm md:text-base">Пароль</label>
+            <input type="password" name="password" id="id_password" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base" placeholder="Введите пароль" required>
+            <button type="button" onclick="togglePassword('id_password')" class="absolute inset-y-0 right-0 flex items-center pr-3 pt-6 text-gray-500 hover:text-blue-600">
+                <i id="eyeIcon_password" class="fas fa-eye text-lg"></i>
+            </button>
         </div>
-        <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-all text-sm md:text-base">Войти <i class="fas fa-sign-in-alt ml-2"></i></button>
+        <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-all text-base md:text-lg shadow-md hover:shadow-lg">
+            Войти <i class="fas fa-sign-in-alt ml-2 text-lg"></i>
+        </button>
     </form>
 </div>
+
+<script>
+    function togglePassword(inputId) {
+        const input = document.getElementById(inputId);
+        const icon = document.getElementById('eyeIcon_' + inputId.split('_')[1]);
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
+</script>
 {% endblock %}

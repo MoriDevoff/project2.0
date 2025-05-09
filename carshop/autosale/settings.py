@@ -67,7 +67,10 @@ TEMPLATES = [
 ]
 
 STATIC_URL = '/static/'
-STATICFILES_DIRS = ['static']
+STATICFILES_DIRS = [
+    BASE_DIR / "static",  # Путь к папке static в корне проекта (carshop)
+]
+STATIC_ROOT = BASE_DIR / "staticfiles"  # Папка для собранных статических файлов
 WSGI_APPLICATION = 'autosale.wsgi.application'
 
 # Database
@@ -112,7 +115,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

@@ -1,0 +1,49 @@
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="tel"] {
+    border: 3px solid #2563eb; /* Синяя окантовка */
+    padding: 12px;
+    border-radius: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 6px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    font-size: 16px;
+    background-color: #f9fafb; /* Легкий фон для полей */
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus {
+    border-color: #1e40af; /* Темнее при фокусе */
+    box-shadow: 0 0 10px rgba(37, 99, 235, 0.5); /* Более заметная тень */
+    outline: none;
+}
+
+.relative {
+    position: relative;
+}
+
+.relative button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.max-w-md {
+    background: linear-gradient(145deg, #ffffff, #f1f5f9);
+    border: 1px solid #e5e7eb;
+}
+
+button[type="submit"] {
+    font-weight: 600;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+button[type="submit"]:hover {
+    transform: translateY(-2px);
+}
