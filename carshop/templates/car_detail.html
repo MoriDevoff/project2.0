@@ -51,12 +51,20 @@
             <p class="text-gray-600 mt-2 text-sm md:text-base">
                 <strong>Создано:</strong> {{ car.created_at|date:"d.m.Y H:i" }}
             </p>
+            <p class="text-gray-600 mt-2 text-sm md:text-base">
+                <strong>Автор:</strong> {{ author.username }}
+            </p>
         </div>
     </div>
     <div class="mt-6 text-center">
         <a href="{% url 'car_list' %}" class="inline-block bg-blue-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base">
             Назад к списку <i class="fas fa-arrow-left ml-2"></i>
         </a>
+        {% if request.user == author %}
+        <a href="{% url 'edit_car' car.id %}" class="ml-4 inline-block bg-green-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm md:text-base">
+            Редактировать <i class="fas fa-edit ml-2"></i>
+        </a>
+        {% endif %}
     </div>
 </div>
 
@@ -66,7 +74,7 @@
         if (carousel) {
             const images = carousel.getElementsByClassName('carousel-image');
             if (images.length > 0) {
-                images[0].classList.add('active'); // Устанавливаем первое изображение как активное
+                images[0].classList.add('active');
             }
         }
     });
@@ -78,13 +86,12 @@
         const images = carousel.getElementsByClassName('carousel-image');
         if (images.length === 0 || !images[index]) return;
 
-        // Удаляем класс active у текущего изображения с небольшой задержкой для плавности
         const currentActive = carousel.querySelector('.carousel-image.active');
         if (currentActive) {
             currentActive.classList.remove('active');
             setTimeout(() => {
                 images[index].classList.add('active');
-            }, 50); // Задержка для синхронизации с переходом
+            }, 50);
         } else {
             images[index].classList.add('active');
         }

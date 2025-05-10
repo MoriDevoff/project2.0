@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from .models import Car
+from django.core.exceptions import ValidationError
+from .models import Car, User
 
 User = get_user_model()
 
@@ -10,12 +11,18 @@ class RegistrationForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'phone', 'password']
+        fields = ['username', 'email', 'phone', 'password']  # Вернули 'email'
         labels = {
             'username': 'Имя пользователя',
             'email': 'Электронная почта',
             'phone': 'Телефон',
         }
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if User.objects.filter(username=username).exists():
+            raise ValidationError('Профиль с таким именем пользователя уже существует.')
+        return username
 
     def clean(self):
         cleaned_data = super().clean()
@@ -80,3 +87,14 @@ class CarForm(forms.ModelForm):
             raise forms.ValidationError('Пожалуйста, добавьте хотя бы одно фото: либо главное фото (URL), либо дополнительные URL-адреса.')
 
         return cleaned_data
+
+class UserProfileForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name', 'phone', 'avatar_url')
+        labels = {
+            'first_name': 'Имя',
+            'last_name': 'Фамилия',
+            'phone': 'Телефон',
+            'avatar_url': 'URL аватара',
+        }

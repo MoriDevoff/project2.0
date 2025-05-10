@@ -8,4 +8,7 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('create-car/', views.create_car, name='create_car'),
     path('car/<int:car_id>/', views.car_detail, name='car_detail'),
+    path('profile/', views.profile, name='profile'),
+    path('edit_profile/', views.edit_profile, name='edit_profile'),
+    path('car/<int:car_id>/edit/', views.edit_car, name='edit_car'),  # Новый маршрут
 ]

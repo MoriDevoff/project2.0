@@ -2,7 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
+from django.contrib.auth.models import AbstractUser, PermissionsMixin, BaseUserManager
 from django.utils.translation import gettext_lazy as _
 
 class CustomUserManager(BaseUserManager):
@@ -31,17 +31,16 @@ class CustomUserManager(BaseUserManager):
 
         return self.create_user(username, email, password, phone, **extra_fields)
 
-class User(AbstractBaseUser, PermissionsMixin):
-    username = models.CharField(max_length=50, unique=True)
+class User(AbstractUser, PermissionsMixin):
     email = models.EmailField(unique=True)
-    phone = models.CharField(max_length=20, blank=True, null=True)
-    registration_date = models.DateTimeField(auto_now_add=True)
-    last_login = models.DateTimeField(null=True, blank=True)
+    phone = models.CharField(max_length=15, blank=True, null=True)
+    # Добавляем first_name и last_name как необязательные поля
+    first_name = models.CharField(max_length=30, blank=True, null=True)
+    last_name = models.CharField(max_length=30, blank=True, null=True)
     is_dealer = models.BooleanField(default=False)
     company_name = models.CharField(max_length=100, blank=True)
-    avatar_url = models.URLField(blank=True)
-    is_staff = models.BooleanField(default=False)  # Добавлено
-    is_active = models.BooleanField(default=True)  # Добавлено
+    date_joined = models.DateTimeField(null=True, blank=True)
+    avatar_url = models.URLField(blank=True, null=True)
 
     objects = CustomUserManager()
 
