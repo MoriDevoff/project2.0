@@ -23,6 +23,13 @@
             from { opacity: 0; }
             to { opacity: 1; }
         }
+        .fade-out {
+            animation: fadeOut 0.5s ease-out forwards;
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
         html, body {
             height: 100%;
             margin: 0;
@@ -99,14 +106,14 @@
             position: absolute;
             top: -0.25rem;
             right: -0.25rem;
-            width: 1rem;
-            height: 1rem;
+            width: 1.25rem;
+            height: 1.25rem;
             background-color: #ef4444;
             border-radius: 9999px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.65rem;
+            font-size: 0.75rem;
             font-weight: bold;
             color: white;
         }
@@ -155,6 +162,34 @@
         .carousel-button.right {
             right: 0.5rem;
         }
+        /* Стили для сообщений */
+        .message {
+            max-width: 400px;
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0.375rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .message.success {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .message.error {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .message button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: inherit;
+            font-size: 1rem;
+        }
         /* Адаптивность для маленьких экранов */
         @media (max-width: 768px) {
             footer {
@@ -181,6 +216,9 @@
             .carousel-container {
                 height: 8rem;
             }
+            .message {
+                max-width: 90%;
+            }
         }
     </style>
 </head>
@@ -192,7 +230,7 @@
         </a>
         <nav class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-6 text-center">
             <a href="{% url 'car_list' %}" class="hover:text-yellow-300 transition-colors">Главная</a>
-            {% if request.session.user_id %}
+            {% if user.is_authenticated %}
             <a href="{% url 'create_car' %}" class="hover:text-yellow-300 transition-colors">Добавить объявление</a>
             <a href="{% url 'profile' %}" class="relative hover:text-yellow-300 transition-colors">
                 Профиль
@@ -210,13 +248,14 @@
 </header>
 <main class="container mx-auto py-6 md:py-10 px-4">
     {% if messages %}
-    {% for message in messages %}
-    {% if "регистрация успешна" not in message|lower and "вышли из аккаунта" not in message|lower %}
-    <div class="mb-4 p-3 rounded {% if message.tags == 'success' %}bg-green-100 text-green-800{% elif message.tags == 'warning' %}bg-yellow-100 text-yellow-800{% else %}bg-red-100 text-red-800{% endif %} text-center text-sm md:text-base">
-        {{ message }}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="message {{ message.tags }} fade-in">
+            {{ message }}
+            <button onclick="this.parentElement.classList.add('fade-out'); setTimeout(() => this.parentElement.remove(), 500);">✕</button>
+        </div>
+        {% endfor %}
     </div>
-    {% endif %}
-    {% endfor %}
     {% endif %}
     {% block content %}
     {% endblock %}
@@ -241,8 +280,24 @@
         }
     }
 
-    // Вызываем функцию при загрузке страницы
-    window.addEventListener('load', adjustMainPadding);
+    // Функция для автоматического удаления сообщений через 5 секунд с плавным исчезновением
+    function autoRemoveMessages() {
+        const messages = document.querySelectorAll('.message');
+        messages.forEach(message => {
+            setTimeout(() => {
+                message.classList.add('fade-out');
+                setTimeout(() => {
+                    message.remove();
+                }, 500); // Соответствует длительности анимации fadeOut
+            }, 5000); // Исчезает через 5 секунд
+        });
+    }
+
+    // Вызываем функции при загрузке страницы
+    window.addEventListener('load', () => {
+        adjustMainPadding();
+        autoRemoveMessages();
+    });
     // Вызываем функцию при изменении размера окна
     window.addEventListener('resize', adjustMainPadding);
 </script>

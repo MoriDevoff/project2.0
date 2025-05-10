@@ -4,21 +4,27 @@
 <div class="profile-container max-w-4xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg">
     <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Профиль пользователя</h2>
 
-    <div class="profile-info space-y-4">
-        <p class="text-gray-700"><strong>Имя пользователя:</strong> {{ user.username }}</p>
-        <p class="text-gray-700"><strong>Имя:</strong> {{ user.first_name|default:"Не указано" }}</p>
-        <p class="text-gray-700"><strong>Фамилия:</strong> {{ user.last_name|default:"Не указано" }}</p>
-        <p class="text-gray-700"><strong>Email:</strong> {{ user.email }}</p>
-        <p class="text-gray-700"><strong>Телефон:</strong> {{ user.phone|default:"Не указан" }}</p>
-        <p class="text-gray-700"><strong>Баланс:</strong> {{ user.balance }} ₽</p>
-        <p class="text-gray-700"><strong>Дата регистрации:</strong> {{ user.date_joined|date:"d.m.Y H:i" }}</p>
-        <p class="text-gray-700"><strong>Последний вход:</strong> {{ user.last_login|date:"d.m.Y H:i" }}</p>
+    <div class="profile-info flex items-center space-x-6">
+        <!-- User Info (Left Side) -->
+        <div class="space-y-4 flex-1">
+            <p class="text-gray-700"><strong>Имя пользователя:</strong> {{ user.username }}</p>
+            <p class="text-gray-700"><strong>Имя:</strong> {{ user.first_name|default:"Не указано" }}</p>
+            <p class="text-gray-700"><strong>Фамилия:</strong> {{ user.last_name|default:"Не указано" }}</p>
+            <p class="text-gray-700"><strong>Email:</strong> {{ user.email }}</p>
+            <p class="text-gray-700"><strong>Телефон:</strong> {{ user.phone|default:"Не указан" }}</p>
+            <p class="text-gray-700"><strong>Баланс:</strong> {{ user.balance }} ₽</p>
+            <p class="text-gray-700"><strong>Дата регистрации:</strong> {{ user.date_joined|date:"d.m.Y H:i" }}</p>
+            <p class="text-gray-700"><strong>Последний вход:</strong> {{ user.last_login|date:"d.m.Y H:i" }}</p>
+        </div>
+        <!-- Avatar (Right Side, Centered Vertically) -->
         {% if user.avatar_url %}
-        <img src="{{ user.avatar_url }}" alt="Аватар" class="w-32 h-32 rounded-full mx-auto mt-4">
+        <div class="flex-shrink-0">
+            <img src="{{ user.avatar_url }}" alt="Аватар" class="w-60 h-60 rounded-full">
+        </div>
         {% endif %}
     </div>
 
-    <!-- Вкладки -->
+    <!-- Rest of the template (tabs, cars, purchases, etc.) remains unchanged -->
     <div class="tabs mt-8">
         <ul class="flex border-b">
             <li class="mr-1">
@@ -152,6 +158,14 @@
     @media (max-width: 768px) {
         .deals-container {
             flex-direction: column;
+        }
+        .profile-info {
+            flex-direction: column;
+            align-items: center;
+            space-x-0;
+        }
+        .profile-info img {
+            margin-top: 1rem;
         }
     }
 </style>

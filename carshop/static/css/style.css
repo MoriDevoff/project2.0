@@ -1,27 +1,3 @@
-input[type="text"],
-input[type="password"],
-input[type="email"],
-input[type="tel"] {
-    border: 3px solid #2563eb; /* Синяя окантовка */
-    padding: 12px;
-    border-radius: 8px;
-    width: 100%;
-    box-sizing: border-box;
-    margin-top: 6px;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    font-size: 16px;
-    background-color: #f9fafb; /* Легкий фон для полей */
-}
-
-input[type="text"]:focus,
-input[type="password"]:focus,
-input[type="email"]:focus,
-input[type="tel"]:focus {
-    border-color: #1e40af; /* Темнее при фокусе */
-    box-shadow: 0 0 10px rgba(37, 99, 235, 0.5); /* Более заметная тень */
-    outline: none;
-}
-
 .relative {
     position: relative;
 }
@@ -87,9 +63,8 @@ button[type="submit"]:hover {
     background-color: #0056b3;
 }
 
-/* Стиль для кнопки сброса уведомлений */
 .btn-reset {
-    background-color: #6b7280; /* Серый цвет для кнопки сброса */
+    background-color: #6b7280;
     color: white;
     padding: 10px 20px;
     border-radius: 5px;
@@ -103,7 +78,6 @@ button[type="submit"]:hover {
     transform: translateY(-2px);
 }
 
-/* Стили для бейджей уведомлений */
 .badge {
     padding: 5px 10px;
     border-radius: 50%;
@@ -121,14 +95,6 @@ button[type="submit"]:hover {
     color: black;
 }
 
-/* Подсветка непрочитанных заявок */
 .bg-yellow-100 {
-    background-color: #fefcbf !important; /* Светло-желтый фон для непрочитанных заявок */
-}
-
-/* Уточнение стилей для кружочка уведомлений */
-.notification-badge {
-    width: 1.25rem;
-    height: 1.25rem;
-    font-size: 0.75rem;
+    background-color: #fefcbf !important;
 }

@@ -1,92 +1,81 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
-<main class="container mx-auto py-6 md:py-10 px-4">
-    <h2 class="text-2xl md:text-4xl font-extrabold text-center mb-6 md:mb-8 text-gray-900 fade-in">Доступные автомобили</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+<div class="fade-in">
+    {% if messages %}
+    {% for message in messages %}
+    {% if message == "Вы успешно вошли!" %}
+    <div class="mb-4 p-3 rounded bg-green-100 text-green-800 text-center text-sm md:text-base">
+        {{ message }}
+    </div>
+    {% endif %}
+    {% if message == "Автомобиль успешно добавлен!" %}
+    <div class="mb-4 p-3 rounded bg-green-100 text-green-800 text-center text-sm md:text-base">
+        {{ message }}
+    </div>
+    {% endif %}
+    {% if message.tags == 'error' %}
+    <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-center text-sm md:text-base">
+        {{ message }}
+    </div>
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 text-center">Список автомобилей</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for car in cars %}
-        <div class="card-hover bg-white rounded-xl shadow-md overflow-hidden transform transition-all duration-300">
-            <div class="relative">
-                {% if car.carphoto_set.exists or car.main_photo_url %}
-                <div id="carousel-{{ car.id }}" class="carousel-container">
-                    {% for photo in car.carphoto_set.all %}
-                    <img src="{{ photo.photo_url }}" alt="{{ car.brand }} {{ car.model }}" class="carousel-image">
-                    {% endfor %}
-                    {% if car.main_photo_url %}
-                    <img src="{{ car.main_photo_url }}" alt="{{ car.brand }} {{ car.model }}" class="carousel-image">
-                    {% endif %}
-                    <button onclick="prevImage('{{ car.id }}')" class="carousel-button left" aria-label="Предыдущее изображение">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <button onclick="nextImage('{{ car.id }}')" class="carousel-button right" aria-label="Следующее изображение">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
-                {% else %}
-                <div class="carousel-container">
-                    <img src="https://via.placeholder.com/150" alt="Нет фото" class="carousel-image active">
-                </div>
+        <div class="bg-white rounded-lg shadow-lg p-4 card-hover transition-all">
+            <div class="carousel-container">
+                {% for photo in car.carphoto_set.all %}
+                <img src="{{ photo.photo_url }}" alt="Car Photo" class="carousel-image {% if forloop.first %}active{% endif %}">
+                {% endfor %}
+                {% if car.carphoto_set.all %}
+                <button class="carousel-button left">&larr;</button>
+                <button class="carousel-button right">&rarr;</button>
                 {% endif %}
             </div>
-            <div class="p-4 md:p-6">
-                <h3 class="text-lg md:text-2xl font-semibold text-gray-900">{{ car.brand }} {{ car.model }} ({{ car.year }})</h3>
-                <p class="text-lg md:text-xl text-yellow-600 mt-2 font-bold">{{ car.price }} ₽</p>
-                <p class="text-gray-600 mt-2 text-sm md:text-base">{{ car.mileage }} км | {{ car.fuel_type }} | {{ car.transmission }}</p>
-                <p class="text-gray-500 mt-1 text-sm md:text-base line-clamp-2">{{ car.description }}</p>
-                <a href="{% url 'car_detail' car.id %}" class="mt-4 inline-block bg-blue-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base">
-                    Подробнее <i class="fas fa-arrow-right ml-2"></i>
-                </a>
-            </div>
+            <h3 class="text-lg font-semibold mt-2">{{ car.brand }} {{ car.model }}</h3>
+            <p class="text-gray-600">Год: {{ car.year }}</p>
+            <p class="text-gray-600">Цена: {{ car.price }} ₽</p>
+            <p class="text-gray-600">Пробег: {{ car.mileage }} км</p>
+            <p class="text-gray-600">Объём двигателя: {{ car.engine_volume }} л</p>
+            <a href="{% url 'car_detail' car.id %}" class="mt-2 inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all">Подробнее</a>
         </div>
         {% empty %}
         <p class="text-center text-gray-600 col-span-full">Автомобили не найдены.</p>
         {% endfor %}
     </div>
-</main>
+</div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('[id^="carousel-"]').forEach(carousel => {
-            const images = carousel.getElementsByClassName('carousel-image');
-            if (images.length > 0) {
-                images[0].classList.add('active'); // Устанавливаем первое изображение как активное
-            }
+    document.querySelectorAll('.carousel-container').forEach(container => {
+        const images = container.querySelectorAll('.carousel-image');
+        if (images.length === 0) return;
+
+        let currentIndex = 0;
+
+        const showImage = (index) => {
+            images.forEach((img, i) => {
+                img.classList.toggle('active', i === index);
+            });
+        };
+
+        container.querySelector('.carousel-button.left').addEventListener('click', () => {
+            currentIndex = (currentIndex - 1 + images.length) % images.length;
+            showImage(currentIndex);
         });
+
+        container.querySelector('.carousel-button.right').addEventListener('click', () => {
+            currentIndex = (currentIndex + 1) % images.length;
+            showImage(currentIndex);
+        });
+
+        // Автоматическая смена изображений каждые 5 секунд
+        setInterval(() => {
+            currentIndex = (currentIndex + 1) % images.length;
+            showImage(currentIndex);
+        }, 5000);
     });
-
-    const carouselIndices = {};
-
-    function showImage(carId, index) {
-        const carousel = document.getElementById('carousel-' + carId);
-        const images = carousel.getElementsByClassName('carousel-image');
-        if (images.length === 0 || !images[index]) return;
-
-        // Удаляем класс active у текущего изображения с небольшой задержкой для плавности
-        const currentActive = carousel.querySelector('.carousel-image.active');
-        if (currentActive) {
-            currentActive.classList.remove('active');
-            setTimeout(() => {
-                images[index].classList.add('active');
-            }, 50); // Задержка для синхронизации с переходом
-        } else {
-            images[index].classList.add('active');
-        }
-    }
-
-    function nextImage(carId) {
-        const carousel = document.getElementById('carousel-' + carId);
-        const images = carousel.getElementsByClassName('carousel-image');
-        if (images.length === 0) return;
-        carouselIndices[carId] = ((carouselIndices[carId] || 0) + 1) % images.length;
-        showImage(carId, carouselIndices[carId]);
-    }
-
-    function prevImage(carId) {
-        const carousel = document.getElementById('carousel-' + carId);
-        const images = carousel.getElementsByClassName('carousel-image');
-        if (images.length === 0) return;
-        carouselIndices[carId] = ((carouselIndices[carId] || 0) - 1 + images.length) % images.length;
-        showImage(carId, carouselIndices[carId]);
-    }
 </script>
 {% endblock %}
