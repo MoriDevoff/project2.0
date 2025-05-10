@@ -47,6 +47,7 @@ button[type="submit"] {
 button[type="submit"]:hover {
     transform: translateY(-2px);
 }
+
 .profile-container {
     max-width: 600px;
     margin: 50px auto;
@@ -84,4 +85,50 @@ button[type="submit"]:hover {
 
 .btn:hover {
     background-color: #0056b3;
+}
+
+/* Стиль для кнопки сброса уведомлений */
+.btn-reset {
+    background-color: #6b7280; /* Серый цвет для кнопки сброса */
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+.btn-reset:hover {
+    background-color: #4b5563;
+    transform: translateY(-2px);
+}
+
+/* Стили для бейджей уведомлений */
+.badge {
+    padding: 5px 10px;
+    border-radius: 50%;
+    font-size: 12px;
+    margin-left: 5px;
+}
+
+.bg-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.bg-warning {
+    background-color: #ffc107;
+    color: black;
+}
+
+/* Подсветка непрочитанных заявок */
+.bg-yellow-100 {
+    background-color: #fefcbf !important; /* Светло-желтый фон для непрочитанных заявок */
+}
+
+/* Уточнение стилей для кружочка уведомлений */
+.notification-badge {
+    width: 1.25rem;
+    height: 1.25rem;
+    font-size: 0.75rem;
 }

@@ -1,13 +1,76 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in">
-    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 text-center">Редактировать объявление</h2>
-    <form method="post" enctype="multipart/form-data">
+<div class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in">
+    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 text-center">Редактировать автомобиль</h2>
+    {% if messages %}
+    {% for message in messages %}
+    <div class="mb-4 p-3 rounded {% if message.tags == 'success' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %} text-center text-sm md:text-base">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+    <form method="post" class="space-y-4">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="w-full mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">Сохранить изменения</button>
+        {% if form.errors %}
+        <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-center text-sm md:text-base">
+            {% for field, errors in form.errors.items %}
+            {% for error in errors %}
+            {{ error }}<br>
+            {% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% for field in form %}
+        <div>
+            <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium text-sm md:text-base">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <span class="text-red-500 text-sm">{{ field.errors }}</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-all text-sm md:text-base">
+            Сохранить изменения <i class="fas fa-car ml-2"></i>
+        </button>
+        <button type="button" onclick="openDeleteModal()" class="w-full bg-red-600 text-white p-3 rounded-lg hover:bg-red-700 transition-all text-sm md:text-base mt-4">
+            Удалить объявление <i class="fas fa-trash-alt ml-2"></i>
+        </button>
     </form>
-    <a href="{% url 'car_detail' car.id %}" class="mt-4 inline-block bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">Отмена</a>
+
+    <!-- Модальное окно подтверждения удаления -->
+    <div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full">
+            <h3 class="text-lg font-bold text-gray-900 mb-4 text-center">Подтверждение удаления</h3>
+            <p class="text-gray-700 text-center mb-4">Вы уверены, что хотите удалить это объявление? Это действие нельзя отменить.</p>
+            <div class="flex items-center justify-center mb-4">
+                <input type="checkbox" id="confirmDelete" class="mr-2">
+                <label for="confirmDelete" class="text-gray-700">Я уверен</label>
+            </div>
+            <form method="post" action="{% url 'delete_car' car.id %}">
+                {% csrf_token %}
+                <div class="flex justify-center space-x-4">
+                    <button type="button" onclick="closeDeleteModal()" class="bg-gray-300 text-gray-700 p-2 rounded-lg hover:bg-gray-400 transition-all">Отмена</button>
+                    <button type="submit" id="deleteButton" disabled class="bg-red-600 text-white p-2 rounded-lg hover:bg-red-700 transition-all disabled:bg-red-300 disabled:cursor-not-allowed">Удалить</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+
+<script>
+    function openDeleteModal() {
+        document.getElementById('deleteModal').classList.remove('hidden');
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').classList.add('hidden');
+        document.getElementById('confirmDelete').checked = false;
+        document.getElementById('deleteButton').disabled = true;
+    }
+
+    document.getElementById('confirmDelete').addEventListener('change', function() {
+        document.getElementById('deleteButton').disabled = !this.checked;
+    });
+</script>
 {% endblock %}

@@ -2,7 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from django.contrib.auth.models import AbstractUser, PermissionsMixin, BaseUserManager
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils.translation import gettext_lazy as _
 
 class CustomUserManager(BaseUserManager):
@@ -32,15 +32,20 @@ class CustomUserManager(BaseUserManager):
 
         return self.create_user(username, email, password, phone, **extra_fields)
 
-class User(AbstractUser, PermissionsMixin):
+class User(AbstractBaseUser, PermissionsMixin):
+    username = models.CharField(max_length=150, unique=True)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=15, blank=True, null=True)
     first_name = models.CharField(max_length=30, blank=True, null=True)
     last_name = models.CharField(max_length=30, blank=True, null=True)
     company_name = models.CharField(max_length=100, blank=True)
-    date_joined = models.DateTimeField(null=True, blank=True)
+    date_joined = models.DateTimeField(default=timezone.now)
     avatar_url = models.URLField(blank=True, null=True)
+    avatar_file = models.ImageField(upload_to='avatars/', blank=True, null=True)
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # Баланс
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    has_new_notifications = models.BooleanField(default=False)  # Поле для уведомлений
 
     objects = CustomUserManager()
 
@@ -103,7 +108,6 @@ class Car(models.Model):
     transmission = models.CharField(max_length=50, choices=TRANSMISSION_CHOICES)
     color = models.CharField(max_length=50)
     description = models.TextField()
-    main_photo_url = models.URLField(max_length=200, null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     is_sold = models.BooleanField(default=False)
 
@@ -156,6 +160,7 @@ class PurchaseRequest(models.Model):
     message = models.TextField(blank=True)
     request_date = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, default='В ожидании', choices=STATUS_CHOICES)
+    is_read = models.BooleanField(default=False)  # Поле для отслеживания прочитанных заявок
 
     class Meta:
         db_table = 'PurchaseRequests'

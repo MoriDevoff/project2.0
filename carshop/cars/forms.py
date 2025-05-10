@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from .models import Car, User, PurchaseRequest
+from .models import Car, User, PurchaseRequest, CarPhoto
 
 User = get_user_model()
 
@@ -41,17 +41,22 @@ class RegistrationForm(forms.ModelForm):
         return user
 
 class CarForm(forms.ModelForm):
-    photo_urls = forms.CharField(
-        widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'Вставьте URL-адреса фотографий, по одному на строку'}),
-        label='URL-адреса фотографий',
-        required=False
-    )
+    photo_url_1 = forms.URLField(label='URL фото 1', required=False)
+    photo_url_2 = forms.URLField(label='URL фото 2', required=False)
+    photo_url_3 = forms.URLField(label='URL фото 3', required=False)
+    photo_url_4 = forms.URLField(label='URL фото 4', required=False)
+    photo_url_5 = forms.URLField(label='URL фото 5', required=False)
+    photo_url_6 = forms.URLField(label='URL фото 6', required=False)
+    photo_url_7 = forms.URLField(label='URL фото 7', required=False)
+    photo_url_8 = forms.URLField(label='URL фото 8', required=False)
+    photo_url_9 = forms.URLField(label='URL фото 9', required=False)
+    photo_url_10 = forms.URLField(label='URL фото 10', required=False)
 
     class Meta:
         model = Car
         fields = [
             'brand', 'model', 'year', 'price', 'mileage', 'engine_capacity',
-            'fuel_type', 'transmission', 'color', 'description', 'main_photo_url'
+            'fuel_type', 'transmission', 'color', 'description'
         ]
         labels = {
             'brand': 'Марка',
@@ -64,7 +69,6 @@ class CarForm(forms.ModelForm):
             'transmission': 'Трансмиссия',
             'color': 'Цвет',
             'description': 'Описание',
-            'main_photo_url': 'Главное фото (URL)',
         }
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
@@ -74,24 +78,28 @@ class CarForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        main_photo_url = cleaned_data.get('main_photo_url')
-        photo_urls = cleaned_data.get('photo_urls', '')
+        photo_urls = [
+            cleaned_data.get(f'photo_url_{i}') for i in range(1, 11)
+        ]
 
-        photo_urls_list = [url.strip() for url in photo_urls.split('\n') if url.strip()]
-        cleaned_data['photo_urls_list'] = photo_urls_list
+        has_additional_photos = any(url for url in photo_urls if url)
 
-        has_main_photo = bool(main_photo_url)
-        has_additional_photos = bool(photo_urls_list)
+        if not has_additional_photos:
+            raise forms.ValidationError('Пожалуйста, добавьте хотя бы одно фото через URL-адрес.')
 
-        if not has_main_photo and not has_additional_photos:
-            raise forms.ValidationError('Пожалуйста, добавьте хотя бы одно фото: либо главное фото (URL), либо дополнительные URL-адреса.')
-
+        cleaned_data['photo_urls_list'] = [url for url in photo_urls if url]
         return cleaned_data
 
 class UserProfileForm(forms.ModelForm):
+    avatar_file = forms.ImageField(
+        label='Загрузить аватар',
+        required=False,
+        widget=forms.ClearableFileInput()
+    )
+
     class Meta:
         model = User
-        fields = ('first_name', 'last_name', 'phone', 'avatar_url')
+        fields = ('first_name', 'last_name', 'phone', 'avatar_url', 'avatar_file')
         labels = {
             'first_name': 'Имя',
             'last_name': 'Фамилия',

@@ -6,16 +6,23 @@ from .forms import RegistrationForm, CarForm, UserProfileForm, PurchaseForm
 from .models import User, Car, CarPhoto, PurchaseRequest
 from django.utils import timezone
 
-
 def car_list(request):
     cars = Car.objects.filter(is_sold=False)
-    return render(request, 'car_list.html', {'cars': cars})
-
+    # Подсчет непрочитанных заявок для отображения в хедере
+    unread_deals_count = 0
+    if request.user.is_authenticated:
+        # Для покупателя: учитываем изменения статуса (Одобрено/Отклонено)
+        buyer_requests = PurchaseRequest.objects.filter(buyer=request.user).order_by('-request_date')
+        # Для продавца: учитываем новые заявки (В ожидании)
+        seller_requests = PurchaseRequest.objects.filter(seller=request.user).order_by('-request_date')
+        unread_purchases_count = buyer_requests.filter(is_read=False, status__in=['Одобрено', 'Отклонено']).count()
+        unread_sales_count = seller_requests.filter(is_read=False, status='В ожидании').count()
+        unread_deals_count = unread_purchases_count + unread_sales_count
+    return render(request, 'car_list.html', {'cars': cars, 'unread_deals_count': unread_deals_count})
 
 def car_detail(request, car_id):
     car = get_object_or_404(Car, id=car_id)
     return render(request, 'car_detail.html', {'car': car, 'author': car.user})
-
 
 def register(request):
     if request.method == 'POST':
@@ -30,7 +37,6 @@ def register(request):
     else:
         form = RegistrationForm()
     return render(request, 'register.html', {'form': form})
-
 
 def login_view(request):
     if request.method == 'POST':
@@ -48,13 +54,11 @@ def login_view(request):
             messages.error(request, 'Неверное имя пользователя или пароль.')
     return render(request, 'login.html')
 
-
 def logout_view(request):
     if 'user_id' in request.session:
         del request.session['user_id']
     messages.success(request, 'Вы вышли из аккаунта.')
     return redirect('login')
-
 
 def create_car(request):
     if 'user_id' not in request.session:
@@ -71,14 +75,9 @@ def create_car(request):
             car.save()
 
             photo_urls = form.cleaned_data['photo_urls_list']
-            print("Saving photo URLs:", photo_urls)
             for url in photo_urls:
-                try:
+                if url:
                     CarPhoto.objects.create(car=car, photo_url=url)
-                except Exception as e:
-                    print(f"Error saving photo URL {url}: {e}")
-                    messages.error(request, f'Ошибка при сохранении фото: {url}')
-                    continue
 
             messages.success(request, 'Автомобиль успешно добавлен!')
             return redirect('car_list')
@@ -89,22 +88,64 @@ def create_car(request):
 
     return render(request, 'create_car.html', {'form': form})
 
-
 @login_required
 def profile(request):
     user_cars = Car.objects.filter(user=request.user, is_sold=False)
-    return render(request, 'profile.html', {'user': request.user, 'user_cars': user_cars})
-
+    buyer_requests = PurchaseRequest.objects.filter(buyer=request.user).order_by('-request_date')
+    seller_requests = PurchaseRequest.objects.filter(seller=request.user).order_by('-request_date')
+    unread_purchases_count = buyer_requests.filter(is_read=False, status__in=['Одобрено', 'Отклонено']).count()
+    unread_sales_count = seller_requests.filter(is_read=False, status='В ожидании').count()
+    has_new_notifications = (unread_purchases_count > 0 or unread_sales_count > 0)
+    unread_deals_count = unread_purchases_count + unread_sales_count
+    print(f"Debug - profile: unread_purchases_count={unread_purchases_count}, unread_sales_count={unread_sales_count}, has_new_notifications={has_new_notifications}")
+    return render(request, 'profile.html', {
+        'user': request.user,
+        'user_cars': user_cars,
+        'buyer_requests': buyer_requests,
+        'seller_requests': seller_requests,
+        'unread_deals_count': unread_deals_count,
+        'unread_purchases_count': unread_purchases_count,
+        'unread_sales_count': unread_sales_count,
+        'has_new_notifications': has_new_notifications,
+    })
 
 @login_required
 def purchases(request):
-    buyer_requests = PurchaseRequest.objects.filter(buyer=request.user)
-    seller_requests = PurchaseRequest.objects.filter(seller=request.user)
-    return render(request, 'purchases.html', {
+    buyer_requests = PurchaseRequest.objects.filter(buyer=request.user).order_by('-request_date')
+    seller_requests = PurchaseRequest.objects.filter(seller=request.user).order_by('-request_date')
+
+    # Пометить все заявки как прочитанные при просмотре страницы покупок
+    buyer_requests.filter(is_read=False, status__in=['Одобрено', 'Отклонено']).update(is_read=True)
+    seller_requests.filter(is_read=False, status='В ожидании').update(is_read=True)
+
+    # Пересчитываем счетчики после обновления
+    unread_purchases_count = buyer_requests.filter(is_read=False, status__in=['Одобрено', 'Отклонено']).count()
+    unread_sales_count = seller_requests.filter(is_read=False, status='В ожидании').count()
+    has_new_notifications = (unread_purchases_count > 0 or unread_sales_count > 0)
+    unread_deals_count = unread_purchases_count + unread_sales_count
+
+    print(f"Debug - purchases: unread_purchases_count={unread_purchases_count}, unread_sales_count={unread_sales_count}, has_new_notifications={has_new_notifications}")
+
+    return render(request, 'profile.html', {
+        'user': request.user,
+        'user_cars': Car.objects.filter(user=request.user, is_sold=False),
         'buyer_requests': buyer_requests,
         'seller_requests': seller_requests,
+        'unread_deals_count': unread_deals_count,
+        'unread_purchases_count': unread_purchases_count,
+        'unread_sales_count': unread_sales_count,
+        'has_new_notifications': has_new_notifications,
     })
 
+@login_required
+def reset_notifications(request):
+    if request.method == 'POST':
+        # Пометить все заявки пользователя как прочитанные
+        PurchaseRequest.objects.filter(buyer=request.user, is_read=False, status__in=['Одобрено', 'Отклонено']).update(is_read=True)
+        PurchaseRequest.objects.filter(seller=request.user, is_read=False, status='В ожидании').update(is_read=True)
+        messages.success(request, 'Все уведомления сброшены.')
+        return redirect('profile')
+    return redirect('profile')
 
 @login_required
 def purchase_car(request, car_id):
@@ -133,46 +174,49 @@ def purchase_car(request, car_id):
             purchase_request.car = car
             purchase_request.buyer = request.user
             purchase_request.seller = car.user
+            purchase_request.is_read = False  # Новая заявка помечена как непрочитанная для продавца
             purchase_request.save()
+
             messages.success(request, 'Заявка на покупку отправлена продавцу!')
             return redirect('car_detail', car_id=car.id)
     else:
         form = PurchaseForm(initial={'offered_price': car.price})
     return render(request, 'purchase_car.html', {'form': form, 'car': car})
 
-
 @login_required
 def respond_purchase(request, purchase_id, action):
     purchase = get_object_or_404(PurchaseRequest, id=purchase_id)
     if request.user != purchase.seller:
         messages.error(request, 'У вас нет прав для обработки этой заявки.')
-        return redirect('purchases')
+        return redirect('profile')
 
     if purchase.status != 'В ожидании':
         messages.error(request, 'Эта заявка уже обработана.')
-        return redirect('purchases')
+        return redirect('profile')
 
     if action == 'accept':
         purchase.status = 'Одобрено'
         purchase.final_price = purchase.offered_price if purchase.offered_price else purchase.car.price
         purchase.car.is_sold = True
         purchase.car.save()
-        purchase.save()  # Баланс обновится через метод save в модели
+        purchase.is_read = False  # Пометить как непрочитанную для покупателя
+        purchase.save()
         messages.success(request, f'Заявка одобрена. Автомобиль продан за {purchase.final_price} ₽.')
     elif action == 'reject':
         purchase.status = 'Отклонено'
+        purchase.is_read = False  # Пометить как непрочитанную для покупателя
         purchase.save()
         messages.success(request, 'Заявка отклонена.')
     else:
         messages.error(request, 'Недопустимое действие.')
+        return redirect('profile')
 
-    return redirect('purchases')
-
+    return redirect('profile')
 
 @login_required
 def edit_profile(request):
     if request.method == 'POST':
-        form = UserProfileForm(request.POST, instance=request.user)
+        form = UserProfileForm(request.POST, request.FILES, instance=request.user)
         if form.is_valid():
             user = form.save(commit=False)
             if not user.date_joined:
@@ -184,7 +228,6 @@ def edit_profile(request):
     else:
         form = UserProfileForm(instance=request.user)
     return render(request, 'edit_profile.html', {'form': form})
-
 
 @login_required
 def edit_car(request, car_id):
@@ -200,27 +243,37 @@ def edit_car(request, car_id):
             car.user = request.user
             car.save()
 
-            existing_photos = CarPhoto.objects.filter(car=car)
-            photo_urls = form.cleaned_data['photo_urls_list']
-            existing_photo_urls = set(existing_photos.values_list('photo_url', flat=True))
-            new_photo_urls = set(photo_urls) - existing_photo_urls
+            # Удаляем все существующие URL-адреса фотографий
+            CarPhoto.objects.filter(car=car).delete()
 
-            for url in existing_photo_urls - set(photo_urls):
-                CarPhoto.objects.filter(car=car, photo_url=url).delete()
-            for url in new_photo_urls:
-                try:
+            # Сохраняем новые URL-адреса
+            photo_urls = form.cleaned_data['photo_urls_list']
+            for url in photo_urls:
+                if url:
                     CarPhoto.objects.create(car=car, photo_url=url)
-                except Exception as e:
-                    print(f"Error saving photo URL {url}: {e}")
-                    messages.error(request, f'Ошибка при сохранении фото: {url}')
-                    continue
 
             messages.success(request, 'Объявление успешно обновлено!')
             return redirect('car_detail', car_id=car_id)
     else:
-        initial_photo_urls = list(car.carphoto_set.values_list('photo_url', flat=True))
-        if car.main_photo_url and car.main_photo_url not in initial_photo_urls:
-            initial_photo_urls.append(car.main_photo_url)
-        form = CarForm(instance=car, initial={'photo_urls_list': initial_photo_urls})
+        # Заполняем поля формы существующими URL-адресаами
+        initial_data = {}
+        existing_photos = list(car.carphoto_set.values_list('photo_url', flat=True))
+        for i, url in enumerate(existing_photos[:10], 1):
+            initial_data[f'photo_url_{i}'] = url
+        form = CarForm(instance=car, initial=initial_data)
 
     return render(request, 'edit_car.html', {'form': form, 'car': car})
+
+@login_required
+def delete_car(request, car_id):
+    car = get_object_or_404(Car, id=car_id)
+    if request.user != car.user:
+        messages.error(request, 'У вас нет прав для удаления этого объявления.')
+        return redirect('car_detail', car_id=car_id)
+
+    if request.method == 'POST':
+        car.delete()
+        messages.success(request, 'Объявление успешно удалено!')
+        return redirect('profile')
+
+    return render(request, 'edit_car.html', {'car': car})

@@ -22,10 +22,15 @@
     <div class="tabs mt-8">
         <ul class="flex border-b">
             <li class="mr-1">
-                <a class="inline-block py-2 px-4 text-blue-600 font-semibold border-b-2 border-blue-600" href="#cars">Мои объявления</a>
+                <a class="tab-link inline-block py-2 px-4 text-blue-600 font-semibold border-b-2 border-blue-600" href="#cars" data-tab="cars">Мои объявления</a>
             </li>
             <li class="mr-1">
-                <a class="inline-block py-2 px-4 text-gray-600 hover:text-blue-600" href="{% url 'purchases' %}">Сделки</a>
+                <a class="tab-link inline-block py-2 px-4 text-gray-600 hover:text-blue-600" href="#purchases" data-tab="purchases">
+                    Сделки
+                    {% if unread_deals_count > 0 %}
+                    <span class="badge bg-danger">{{ unread_deals_count }}</span>
+                    {% endif %}
+                </a>
             </li>
         </ul>
     </div>
@@ -52,9 +57,130 @@
         {% endif %}
     </div>
 
+    <!-- Сделки -->
+    <div id="purchases" class="tab-content mt-4 hidden">
+        <h3 class="text-xl font-semibold text-gray-800 mb-4">Сделки</h3>
+
+        {% if unread_deals_count > 0 %}
+        <div class="mb-4 text-center">
+            <form method="POST" action="{% url 'reset_notifications' %}" class="inline-block">
+                {% csrf_token %}
+                <button type="submit" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors">
+                    Сбросить уведомления ({{ unread_deals_count }})
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <div class="deals-container flex flex-wrap gap-6">
+            <!-- Мои покупки (слева) -->
+            <div class="purchases-section flex-1 min-w-[300px]">
+                <h4 class="text-lg font-semibold text-gray-700 mb-2">
+                    Мои покупки
+                    {% if unread_purchases_count > 0 %}
+                    <span class="badge bg-warning">{{ unread_purchases_count }}</span>
+                    {% endif %}
+                </h4>
+                {% if buyer_requests %}
+                <div class="grid gap-4">
+                    {% for request in buyer_requests %}
+                    <div class="p-4 bg-gray-50 rounded-lg shadow {% if not request.is_read and request.status in 'Одобрено,Отклонено' %}bg-yellow-100{% endif %}">
+                        <p><strong>{{ request.car.brand }} {{ request.car.model }} ({{ request.car.year }})</strong></p>
+                        <p>Цена: {{ request.final_price|default:request.offered_price|default:request.car.price }} ₽</p>
+                        <p>Статус: {{ request.status }}</p>
+                        <p>Дата заявки: {{ request.request_date|date:"d.m.Y H:i" }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-600">У вас нет покупок.</p>
+                {% endif %}
+            </div>
+
+            <!-- Мои продажи (справа) -->
+            <div class="sales-section flex-1 min-w-[300px]">
+                <h4 class="text-lg font-semibold text-gray-700 mb-2">
+                    Мои продажи
+                    {% if unread_sales_count > 0 %}
+                    <span class="badge bg-warning">{{ unread_sales_count }}</span>
+                    {% endif %}
+                </h4>
+                {% if seller_requests %}
+                <div class="grid gap-4">
+                    {% for request in seller_requests %}
+                    <div class="p-4 bg-gray-50 rounded-lg shadow {% if not request.is_read and request.status == 'В ожидании' %}bg-yellow-100{% endif %}">
+                        <p><strong>{{ request.car.brand }} {{ request.car.model }} ({{ request.car.year }})</strong></p>
+                        <p>Покупатель: {{ request.buyer.username }}</p>
+                        <p>Цена: {{ request.final_price|default:request.offered_price|default:request.car.price }} ₽</p>
+                        <p>Статус: {{ request.status }}</p>
+                        <p>Дата заявки: {{ request.request_date|date:"d.m.Y H:i" }}</p>
+                        {% if request.status == 'В ожидании' %}
+                        <div class="mt-2">
+                            <a href="{% url 'respond_purchase' request.id 'accept' %}" class="text-green-600 hover:underline">Одобрить</a>
+                            <a href="{% url 'respond_purchase' request.id 'reject' %}" class="ml-4 text-red-600 hover:underline">Отклонить</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-600">У вас нет продаж.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
     <div class="mt-6 text-center">
         <a href="{% url 'car_list' %}" class="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">Вернуться к списку машин</a>
         <a href="{% url 'edit_profile' %}" class="ml-4 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">Редактировать профиль</a>
     </div>
 </div>
+
+<style>
+    .deals-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+    }
+
+    .purchases-section, .sales-section {
+        flex: 1;
+        min-width: 300px;
+    }
+
+    /* Адаптивность для маленьких экранов */
+    @media (max-width: 768px) {
+        .deals-container {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const tabLinks = document.querySelectorAll('.tab-link');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabLinks.forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                // Удаляем активные классы у всех вкладок и содержимого
+                tabLinks.forEach(tab => {
+                    tab.classList.remove('text-blue-600', 'font-semibold', 'border-b-2', 'border-blue-600');
+                    tab.classList.add('text-gray-600', 'hover:text-blue-600');
+                });
+                tabContents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+
+                // Добавляем активные классы к текущей вкладке и показываем её содержимое
+                this.classList.remove('text-gray-600', 'hover:text-blue-600');
+                this.classList.add('text-blue-600', 'font-semibold', 'border-b-2', 'border-blue-600');
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(tabId).classList.remove('hidden');
+            });
+        });
+    });
+</script>
 {% endblock %}
