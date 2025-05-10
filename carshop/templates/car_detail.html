@@ -8,22 +8,24 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
             {% if car.carphoto_set.exists or car.main_photo_url %}
-                <div id="carousel-{{ car.id }}" class="relative">
-                    {% for photo in car.carphoto_set.all %}
-                        <img src="{{ photo.photo_url }}" alt="{{ car.brand }} {{ car.model }}" class="carousel-image w-full h-64 md:h-80 object-cover rounded-lg hidden">
-                    {% endfor %}
-                    {% if car.main_photo_url %}
-                        <img src="{{ car.main_photo_url }}" alt="{{ car.brand }} {{ car.model }}" class="carousel-image w-full h-64 md:h-80 object-cover rounded-lg hidden">
-                    {% endif %}
-                    <button onclick="prevImage('{{ car.id }}')" class="absolute left-2 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full hover:bg-gray-600">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <button onclick="nextImage('{{ car.id }}')" class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-gray-800 text-white p-2 rounded-full hover:bg-gray-600">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
+            <div id="carousel-{{ car.id }}" class="carousel-container">
+                {% for photo in car.carphoto_set.all %}
+                <img src="{{ photo.photo_url }}" alt="{{ car.brand }} {{ car.model }}" class="carousel-image">
+                {% endfor %}
+                {% if car.main_photo_url %}
+                <img src="{{ car.main_photo_url }}" alt="{{ car.brand }} {{ car.model }}" class="carousel-image">
+                {% endif %}
+                <button onclick="prevImage('{{ car.id }}')" class="carousel-button left" aria-label="Предыдущее изображение">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button onclick="nextImage('{{ car.id }}')" class="carousel-button right" aria-label="Следующее изображение">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
             {% else %}
-                <img src="https://via.placeholder.com/150" alt="Нет фото" class="w-full h-64 md:h-80 object-cover rounded-lg">
+            <div class="carousel-container">
+                <img src="https://via.placeholder.com/150" alt="Нет фото" class="carousel-image active">
+            </div>
             {% endif %}
         </div>
         <div>
@@ -59,39 +61,49 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const carousel = document.getElementById('carousel-{{ car.id }}');
-    if (carousel) {
+    document.addEventListener('DOMContentLoaded', function() {
+        const carousel = document.getElementById('carousel-{{ car.id }}');
+        if (carousel) {
+            const images = carousel.getElementsByClassName('carousel-image');
+            if (images.length > 0) {
+                images[0].classList.add('active'); // Устанавливаем первое изображение как активное
+            }
+        }
+    });
+
+    const carouselIndices = {};
+
+    function showImage(carId, index) {
+        const carousel = document.getElementById('carousel-' + carId);
         const images = carousel.getElementsByClassName('carousel-image');
-        if (images.length > 0) {
-            images[0].classList.remove('hidden');
+        if (images.length === 0 || !images[index]) return;
+
+        // Удаляем класс active у текущего изображения с небольшой задержкой для плавности
+        const currentActive = carousel.querySelector('.carousel-image.active');
+        if (currentActive) {
+            currentActive.classList.remove('active');
+            setTimeout(() => {
+                images[index].classList.add('active');
+            }, 50); // Задержка для синхронизации с переходом
+        } else {
+            images[index].classList.add('active');
         }
     }
-});
 
-let currentIndex{{ car.id }} = 0;
-
-function showImage(carId, index) {
-    const carousel = document.getElementById('carousel-' + carId);
-    const images = carousel.getElementsByClassName('carousel-image');
-    for (let i = 0; i < images.length; i++) {
-        images[i].classList.add('hidden');
+    function nextImage(carId) {
+        const carousel = document.getElementById('carousel-' + carId);
+        const images = carousel.getElementsByClassName('carousel-image');
+        if (images.length === 0) return;
+        carouselIndices[carId] = ((carouselIndices[carId] || 0) + 1) % images.length;
+        showImage(carId, carouselIndices[carId]);
     }
-    images[index].classList.remove('hidden');
-}
 
-function nextImage(carId) {
-    const carousel = document.getElementById('carousel-' + carId);
-    const images = carousel.getElementsByClassName('carousel-image');
-    currentIndex{{ car.id }} = (currentIndex{{ car.id }} + 1) % images.length;
-    showImage(carId, currentIndex{{ car.id }});
-}
-
-function prevImage(carId) {
-    const carousel = document.getElementById('carousel-' + carId);
-    const images = carousel.getElementsByClassName('carousel-image');
-    currentIndex{{ car.id }} = (currentIndex{{ car.id }} - 1 + images.length) % images.length;
-    showImage(carId, currentIndex{{ car.id }});
-}
+    function prevImage(carId) {
+        const carousel = document.getElementById('carousel-' + carId);
+        const images = carousel.getElementsByClassName('carousel-image');
+        if (images.length === 0) return;
+        carouselIndices[carId] = ((carouselIndices[carId] || 0) - 1 + images.length) % images.length;
+        showImage(carId, carouselIndices[carId]);
+    }
 </script>
 {% endblock %}

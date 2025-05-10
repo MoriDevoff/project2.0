@@ -13,22 +13,22 @@
     <form method="post" class="space-y-4">
         {% csrf_token %}
         {% if form.errors %}
-            <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-center text-sm md:text-base">
-                {% for field, errors in form.errors.items %}
-                    {% for error in errors %}
-                        {{ error }}<br>
-                    {% endfor %}
-                {% endfor %}
-            </div>
+        <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-center text-sm md:text-base">
+            {% for field, errors in form.errors.items %}
+            {% for error in errors %}
+            {{ error }}<br>
+            {% endfor %}
+            {% endfor %}
+        </div>
         {% endif %}
         {% for field in form %}
-            <div>
-                <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium text-sm md:text-base">{{ field.label }}</label>
-                {{ field }}
-                {% if field.errors %}
-                    <span class="text-red-500 text-sm">{{ field.errors }}</span>
-                {% endif %}
-            </div>
+        <div>
+            <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium text-sm md:text-base">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <span class="text-red-500 text-sm">{{ field.errors }}</span>
+            {% endif %}
+        </div>
         {% endfor %}
         <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-all text-sm md:text-base">
             Опубликовать <i class="fas fa-car ml-2"></i>
