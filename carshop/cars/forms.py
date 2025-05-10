@@ -1,17 +1,8 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.models import User
-from .models import Car, CarSpecification
-from .models import User
+from django.contrib.auth import get_user_model
+from .models import Car
 
-class LoginForm(forms.Form):
-    username = forms.CharField(
-        max_length=100,
-        widget=forms.TextInput(attrs={'class': 'w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'})
-    )
-    password = forms.CharField(
-        widget=forms.PasswordInput(attrs={'class': 'w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'})
-    )
+User = get_user_model()
 
 class RegistrationForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput, label='Пароль')
@@ -37,31 +28,55 @@ class RegistrationForm(forms.ModelForm):
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.set_password(self.cleaned_data['password'])  # Хешируем пароль
+        user.set_password(self.cleaned_data['password'])
         if commit:
             user.save()
         return user
 
 class CarForm(forms.ModelForm):
+    photo_urls = forms.CharField(
+        widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'Вставьте URL-адреса фотографий, по одному на строку'}),
+        label='URL-адреса фотографий',
+        required=False
+    )
+
     class Meta:
         model = Car
-        fields = ['brand', 'model', 'year', 'price', 'mileage', 'engine_capacity', 'fuel_type', 'transmission', 'color', 'description', 'main_photo_url']
+        fields = [
+            'brand', 'model', 'year', 'price', 'mileage', 'engine_capacity',
+            'fuel_type', 'transmission', 'color', 'description', 'main_photo_url'
+        ]
+        labels = {
+            'brand': 'Марка',
+            'model': 'Модель',
+            'year': 'Год выпуска',
+            'price': 'Цена (₽)',
+            'mileage': 'Пробег (км)',
+            'engine_capacity': 'Объем двигателя (л)',
+            'fuel_type': 'Тип топлива',
+            'transmission': 'Трансмиссия',
+            'color': 'Цвет',
+            'description': 'Описание',
+            'main_photo_url': 'Главное фото (URL)',
+        }
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+            'fuel_type': forms.Select(),
+            'transmission': forms.Select(),
+        }
 
-    def __init__(self, *args, **kwargs):
-        super(CarForm, self).__init__(*args, **kwargs)
-        for field in self.fields:
-            self.fields[field].widget.attrs.update({
-                'class': 'w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-            })
+    def clean(self):
+        cleaned_data = super().clean()
+        main_photo_url = cleaned_data.get('main_photo_url')
+        photo_urls = cleaned_data.get('photo_urls', '')
 
-class CarSpecificationForm(forms.ModelForm):
-    class Meta:
-        model = CarSpecification
-        fields = ['body_type', 'doors', 'seats', 'power', 'drive_type', 'vin', 'weight', 'country_of_origin']
+        photo_urls_list = [url.strip() for url in photo_urls.split('\n') if url.strip()]
+        cleaned_data['photo_urls_list'] = photo_urls_list
 
-    def __init__(self, *args, **kwargs):
-        super(CarSpecificationForm, self).__init__(*args, **kwargs)
-        for field in self.fields:
-            self.fields[field].widget.attrs.update({
-                'class': 'w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'
-            })
+        has_main_photo = bool(main_photo_url)
+        has_additional_photos = bool(photo_urls_list)
+
+        if not has_main_photo and not has_additional_photos:
+            raise forms.ValidationError('Пожалуйста, добавьте хотя бы одно фото: либо главное фото (URL), либо дополнительные URL-адреса.')
+
+        return cleaned_data
