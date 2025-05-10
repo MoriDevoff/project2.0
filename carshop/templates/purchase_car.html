@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg">
+    <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">
+        Покупка автомобиля: {{ car.brand }} {{ car.model }} ({{ car.year }})
+    </h2>
+    <p class="text-gray-700 mb-4"><strong>Цена продавца:</strong> {{ car.price }} ₽</p>
+    <form method="post">
+        {% csrf_token %}
+        <div class="space-y-4">
+            {{ form.as_p }}
+        </div>
+        <div class="mt-6 text-center">
+            <button type="submit" class="inline-block bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 transition-colors">
+                Отправить заявку
+            </button>
+            <a href="{% url 'car_detail' car.id %}" class="ml-4 inline-block px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
+                Отмена
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

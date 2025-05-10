@@ -2,17 +2,20 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from .forms import RegistrationForm, CarForm, UserProfileForm
-from .models import User, Car, CarPhoto
+from .forms import RegistrationForm, CarForm, UserProfileForm, PurchaseForm
+from .models import User, Car, CarPhoto, PurchaseRequest
 from django.utils import timezone
+
 
 def car_list(request):
     cars = Car.objects.filter(is_sold=False)
     return render(request, 'car_list.html', {'cars': cars})
 
+
 def car_detail(request, car_id):
     car = get_object_or_404(Car, id=car_id)
     return render(request, 'car_detail.html', {'car': car, 'author': car.user})
+
 
 def register(request):
     if request.method == 'POST':
@@ -27,6 +30,7 @@ def register(request):
     else:
         form = RegistrationForm()
     return render(request, 'register.html', {'form': form})
+
 
 def login_view(request):
     if request.method == 'POST':
@@ -44,11 +48,13 @@ def login_view(request):
             messages.error(request, 'Неверное имя пользователя или пароль.')
     return render(request, 'login.html')
 
+
 def logout_view(request):
     if 'user_id' in request.session:
         del request.session['user_id']
     messages.success(request, 'Вы вышли из аккаунта.')
     return redirect('login')
+
 
 def create_car(request):
     if 'user_id' not in request.session:
@@ -83,10 +89,85 @@ def create_car(request):
 
     return render(request, 'create_car.html', {'form': form})
 
+
 @login_required
 def profile(request):
     user_cars = Car.objects.filter(user=request.user, is_sold=False)
     return render(request, 'profile.html', {'user': request.user, 'user_cars': user_cars})
+
+
+@login_required
+def purchases(request):
+    buyer_requests = PurchaseRequest.objects.filter(buyer=request.user)
+    seller_requests = PurchaseRequest.objects.filter(seller=request.user)
+    return render(request, 'purchases.html', {
+        'buyer_requests': buyer_requests,
+        'seller_requests': seller_requests,
+    })
+
+
+@login_required
+def purchase_car(request, car_id):
+    car = get_object_or_404(Car, id=car_id)
+    if request.user == car.user:
+        messages.error(request, 'Вы не можете купить свой собственный автомобиль.')
+        return redirect('car_detail', car_id=car.id)
+
+    if car.is_sold:
+        messages.error(request, 'Этот автомобиль уже продан.')
+        return redirect('car_detail', car_id=car.id)
+
+    if PurchaseRequest.objects.filter(car=car, buyer=request.user, status='В ожидании').exists():
+        messages.error(request, 'Вы уже подали заявку на покупку этого автомобиля.')
+        return redirect('car_detail', car_id=car.id)
+
+    if request.method == 'POST':
+        form = PurchaseForm(request.POST)
+        if form.is_valid():
+            offered_price = form.cleaned_data.get('offered_price') or car.price
+            if request.user.balance < offered_price:
+                messages.error(request, 'Недостаточно средств на балансе для покупки.')
+                return render(request, 'purchase_car.html', {'form': form, 'car': car})
+
+            purchase_request = form.save(commit=False)
+            purchase_request.car = car
+            purchase_request.buyer = request.user
+            purchase_request.seller = car.user
+            purchase_request.save()
+            messages.success(request, 'Заявка на покупку отправлена продавцу!')
+            return redirect('car_detail', car_id=car.id)
+    else:
+        form = PurchaseForm(initial={'offered_price': car.price})
+    return render(request, 'purchase_car.html', {'form': form, 'car': car})
+
+
+@login_required
+def respond_purchase(request, purchase_id, action):
+    purchase = get_object_or_404(PurchaseRequest, id=purchase_id)
+    if request.user != purchase.seller:
+        messages.error(request, 'У вас нет прав для обработки этой заявки.')
+        return redirect('purchases')
+
+    if purchase.status != 'В ожидании':
+        messages.error(request, 'Эта заявка уже обработана.')
+        return redirect('purchases')
+
+    if action == 'accept':
+        purchase.status = 'Одобрено'
+        purchase.final_price = purchase.offered_price if purchase.offered_price else purchase.car.price
+        purchase.car.is_sold = True
+        purchase.car.save()
+        purchase.save()  # Баланс обновится через метод save в модели
+        messages.success(request, f'Заявка одобрена. Автомобиль продан за {purchase.final_price} ₽.')
+    elif action == 'reject':
+        purchase.status = 'Отклонено'
+        purchase.save()
+        messages.success(request, 'Заявка отклонена.')
+    else:
+        messages.error(request, 'Недопустимое действие.')
+
+    return redirect('purchases')
+
 
 @login_required
 def edit_profile(request):
@@ -103,6 +184,7 @@ def edit_profile(request):
     else:
         form = UserProfileForm(instance=request.user)
     return render(request, 'edit_profile.html', {'form': form})
+
 
 @login_required
 def edit_car(request, car_id):

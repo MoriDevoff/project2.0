@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from .models import Car, User
+from .models import Car, User, PurchaseRequest
 
 User = get_user_model()
 
@@ -11,7 +11,7 @@ class RegistrationForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'phone', 'password']  # Вернули 'email'
+        fields = ['username', 'email', 'phone', 'password']
         labels = {
             'username': 'Имя пользователя',
             'email': 'Электронная почта',
@@ -98,3 +98,28 @@ class UserProfileForm(forms.ModelForm):
             'phone': 'Телефон',
             'avatar_url': 'URL аватара',
         }
+
+class PurchaseForm(forms.ModelForm):
+    class Meta:
+        model = PurchaseRequest
+        fields = ['offered_price', 'message']
+        labels = {
+            'offered_price': 'Предложенная цена (₽)',
+            'message': 'Сообщение продавцу',
+        }
+        widgets = {
+            'message': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Напишите сообщение продавцу (опционально)'}),
+        }
+
+    def clean_offered_price(self):
+        offered_price = self.cleaned_data.get('offered_price')
+        if offered_price is not None and offered_price <= 0:
+            raise ValidationError('Цена должна быть больше 0.')
+        return offered_price
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if 'buyer' in self.instance.__dict__ and 'seller' in self.instance.__dict__:
+            if self.instance.buyer == self.instance.seller:
+                raise ValidationError('Покупатель и продавец не могут быть одним и тем же пользователем.')
+        return cleaned_data

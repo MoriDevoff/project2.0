@@ -1,14 +1,16 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="profile-container max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg">
+<div class="profile-container max-w-4xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg">
     <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Профиль пользователя</h2>
+
     <div class="profile-info space-y-4">
         <p class="text-gray-700"><strong>Имя пользователя:</strong> {{ user.username }}</p>
         <p class="text-gray-700"><strong>Имя:</strong> {{ user.first_name|default:"Не указано" }}</p>
         <p class="text-gray-700"><strong>Фамилия:</strong> {{ user.last_name|default:"Не указано" }}</p>
         <p class="text-gray-700"><strong>Email:</strong> {{ user.email }}</p>
         <p class="text-gray-700"><strong>Телефон:</strong> {{ user.phone|default:"Не указан" }}</p>
+        <p class="text-gray-700"><strong>Баланс:</strong> {{ user.balance }} ₽</p>
         <p class="text-gray-700"><strong>Дата регистрации:</strong> {{ user.date_joined|date:"d.m.Y H:i" }}</p>
         <p class="text-gray-700"><strong>Последний вход:</strong> {{ user.last_login|date:"d.m.Y H:i" }}</p>
         {% if user.avatar_url %}
@@ -16,23 +18,43 @@
         {% endif %}
     </div>
 
-    <h3 class="text-xl font-semibold text-gray-800 mt-8 mb-4">Мои объявления</h3>
-    {% if user_cars %}
-    <div class="grid gap-4">
-        {% for car in user_cars %}
-        <div class="p-4 bg-gray-50 rounded-lg shadow">
-            <p><strong>{{ car.brand }} {{ car.model }} ({{ car.year }})</strong></p>
-            <p>Цена: {{ car.price }} ₽</p>
-            <a href="{% url 'car_detail' car.id %}" class="text-blue-600 hover:underline">Подробнее</a>
-            <a href="{% url 'edit_car' car.id %}" class="ml-4 text-green-600 hover:underline">Редактировать</a>
-        </div>
-        {% endfor %}
+    <!-- Вкладки -->
+    <div class="tabs mt-8">
+        <ul class="flex border-b">
+            <li class="mr-1">
+                <a class="inline-block py-2 px-4 text-blue-600 font-semibold border-b-2 border-blue-600" href="#cars">Мои объявления</a>
+            </li>
+            <li class="mr-1">
+                <a class="inline-block py-2 px-4 text-gray-600 hover:text-blue-600" href="{% url 'purchases' %}">Сделки</a>
+            </li>
+        </ul>
     </div>
-    {% else %}
-    <p class="text-gray-600">У вас нет активных объявлений.</p>
-    {% endif %}
 
-    <a href="{% url 'car_list' %}" class="mt-6 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">Вернуться к списку машин</a>
-    <a href="{% url 'edit_profile' %}" class="mt-2 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">Редактировать профиль</a>
+    <!-- Мои объявления -->
+    <div id="cars" class="tab-content mt-4">
+        <h3 class="text-xl font-semibold text-gray-800 mb-4">Мои объявления</h3>
+        {% if user_cars %}
+        <div class="grid gap-4">
+            {% for car in user_cars %}
+            <div class="p-4 bg-gray-50 rounded-lg shadow">
+                <p><strong>{{ car.brand }} {{ car.model }} ({{ car.year }})</strong></p>
+                <p>Цена: {{ car.price }} ₽</p>
+                {% if car.is_sold %}
+                <p class="text-green-600 font-semibold">Продано</p>
+                {% endif %}
+                <a href="{% url 'car_detail' car.id %}" class="text-blue-600 hover:underline">Подробнее</a>
+                <a href="{% url 'edit_car' car.id %}" class="ml-4 text-green-600 hover:underline">Редактировать</a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-gray-600">У вас нет активных объявлений.</p>
+        {% endif %}
+    </div>
+
+    <div class="mt-6 text-center">
+        <a href="{% url 'car_list' %}" class="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">Вернуться к списку машин</a>
+        <a href="{% url 'edit_profile' %}" class="ml-4 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">Редактировать профиль</a>
+    </div>
 </div>
 {% endblock %}

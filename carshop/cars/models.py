@@ -14,6 +14,7 @@ class CustomUserManager(BaseUserManager):
         email = self.normalize_email(email)
         user = self.model(username=username, email=email, phone=phone, **extra_fields)
         user.set_password(password)
+        user.balance = 0  # Начальный баланс 0
         user.save()
         return user
 
@@ -34,13 +35,12 @@ class CustomUserManager(BaseUserManager):
 class User(AbstractUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=15, blank=True, null=True)
-    # Добавляем first_name и last_name как необязательные поля
     first_name = models.CharField(max_length=30, blank=True, null=True)
     last_name = models.CharField(max_length=30, blank=True, null=True)
-    is_dealer = models.BooleanField(default=False)
     company_name = models.CharField(max_length=100, blank=True)
     date_joined = models.DateTimeField(null=True, blank=True)
     avatar_url = models.URLField(blank=True, null=True)
+    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # Баланс
 
     objects = CustomUserManager()
 
@@ -87,9 +87,8 @@ DRIVE_TYPE_CHOICES = [
 
 STATUS_CHOICES = [
     ('В ожидании', 'В ожидании'),
-    ('Принято', 'Принято'),
+    ('Одобрено', 'Одобрено'),
     ('Отклонено', 'Отклонено'),
-    ('Завершено', 'Завершено'),
 ]
 
 class Car(models.Model):
@@ -152,6 +151,8 @@ class PurchaseRequest(models.Model):
     car = models.ForeignKey(Car, on_delete=models.CASCADE)
     buyer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='buyer_requests')
     seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='seller_requests')
+    offered_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    final_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     message = models.TextField(blank=True)
     request_date = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, default='В ожидании', choices=STATUS_CHOICES)
@@ -159,9 +160,13 @@ class PurchaseRequest(models.Model):
     class Meta:
         db_table = 'PurchaseRequests'
 
-    def clean(self):
-        if self.buyer == self.seller:
-            raise ValidationError('Покупатель и продавец не могут быть одним и тем же пользователем.')
+    def save(self, *args, **kwargs):
+        if self.status == 'Одобрено' and self.final_price:
+            self.buyer.balance -= self.final_price
+            self.seller.balance += self.final_price
+            self.buyer.save()
+            self.seller.save()
+        super().save(*args, **kwargs)
 
 class PriceHistory(models.Model):
     car = models.ForeignKey(Car, on_delete=models.CASCADE)
