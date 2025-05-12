@@ -106,10 +106,11 @@ class Car(models.Model):
     engine_capacity = models.DecimalField(max_digits=4, decimal_places=1)
     fuel_type = models.CharField(max_length=50, choices=FUEL_TYPE_CHOICES)
     transmission = models.CharField(max_length=50, choices=TRANSMISSION_CHOICES)
-    color = models.CharField(max_length=50)
+    color = models.CharField(max_length=50, blank=True, null=True)
     description = models.TextField()
     created_at = models.DateTimeField(default=timezone.now)
     is_sold = models.BooleanField(default=False)
+    condition = models.CharField(max_length=20, choices=[('new', 'Новый'), ('used', 'Б/у')], default='used')
 
     def __str__(self):
         return f"{self.brand} {self.model} ({self.year})"

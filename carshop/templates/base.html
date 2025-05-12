@@ -56,7 +56,6 @@
             margin: 0;
             line-height: 1.2;
         }
-        /* Стили для полей ввода */
         input[type="text"],
         input[type="email"],
         input[type="tel"],
@@ -87,7 +86,6 @@
             border-color: #2563eb;
             box-shadow: 0 0 5px rgba(37, 99, 235, 0.3);
         }
-        /* Стили для навигационных кнопок */
         nav a {
             position: relative;
             padding: 0.5rem 1rem;
@@ -101,7 +99,6 @@
             color: #FBBF24;
             border-color: #FBBF24;
         }
-        /* Стили для значка оповещения */
         .notification-badge {
             position: absolute;
             top: -0.25rem;
@@ -117,7 +114,6 @@
             font-weight: bold;
             color: white;
         }
-        /* Стили для карусели */
         .carousel-container {
             position: relative;
             width: 100%;
@@ -142,7 +138,6 @@
         .carousel-image.active {
             opacity: 1;
         }
-        /* Стили для кнопок карусели */
         .carousel-button {
             position: absolute;
             top: 50%;
@@ -162,7 +157,6 @@
         .carousel-button.right {
             right: 0.5rem;
         }
-        /* Стили для сообщений */
         .message {
             max-width: 400px;
             width: 100%;
@@ -190,7 +184,18 @@
             color: inherit;
             font-size: 1rem;
         }
-        /* Адаптивность для маленьких экранов */
+        .search-form {
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .search-form input[type="text"],
+        .search-form input[type="number"],
+        .search-form select {
+            flex: 1 1 200px;
+            max-width: 300px;
+        }
         @media (max-width: 768px) {
             footer {
                 padding: 0.25rem 0;
@@ -204,6 +209,10 @@
             }
             .carousel-container {
                 height: 10rem;
+            }
+            .search-form {
+                flex-direction: column;
+                gap: 0.5rem;
             }
         }
         @media (max-width: 640px) {
@@ -270,7 +279,6 @@
     </div>
 </footer>
 <script>
-    // Функция для динамического расчета высоты футера и добавления padding-bottom к main
     function adjustMainPadding() {
         const footer = document.querySelector('footer');
         const main = document.querySelector('main');
@@ -280,7 +288,6 @@
         }
     }
 
-    // Функция для автоматического удаления сообщений через 5 секунд с плавным исчезновением
     function autoRemoveMessages() {
         const messages = document.querySelectorAll('.message');
         messages.forEach(message => {
@@ -288,17 +295,15 @@
                 message.classList.add('fade-out');
                 setTimeout(() => {
                     message.remove();
-                }, 500); // Соответствует длительности анимации fadeOut
-            }, 5000); // Исчезает через 5 секунд
+                }, 500);
+            }, 5000);
         });
     }
 
-    // Вызываем функции при загрузке страницы
     window.addEventListener('load', () => {
         adjustMainPadding();
         autoRemoveMessages();
     });
-    // Вызываем функцию при изменении размера окна
     window.addEventListener('resize', adjustMainPadding);
 </script>
 </body>

@@ -22,7 +22,109 @@
     {% endif %}
     {% endfor %}
     {% endif %}
+
     <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 text-center">Список автомобилей</h2>
+
+    <!-- Строка поиска -->
+    <form method="get" action="{% url 'car_search' %}" class="mb-4 flex justify-center">
+        <input type="text" name="q" placeholder="Поиск по названию..." value="{{ request.GET.q }}" class="w-full max-w-md p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <button type="submit" class="ml-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Поиск</button>
+    </form>
+
+    <!-- Компактная вкладка с фильтрами -->
+    <details class="mb-4 bg-white rounded-lg shadow-md p-4">
+        <summary class="text-lg font-semibold text-gray-700 cursor-pointer pb-2 border-b border-gray-200">Фильтры</summary>
+        <form method="get" action="{% url 'car_search' %}" class="search-form mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            <select name="condition" class="w-full">
+                <option value="">Все состояния</option>
+                <option value="new" {% if request.GET.condition == "new" %}selected{% endif %}>Новый</option>
+                <option value="used" {% if request.GET.condition == "used" %}selected{% endif %}>Б/у</option>
+            </select>
+            <input type="number" name="price_min" placeholder="Мин. цена (₽)" value="{{ request.GET.price_min }}" class="w-full">
+            <input type="number" name="price_max" placeholder="Макс. цена (₽)" value="{{ request.GET.price_max }}" class="w-full">
+            <input type="number" name="mileage_min" placeholder="Мин. пробег (км)" value="{{ request.GET.mileage_min }}" class="w-full">
+            <input type="number" name="mileage_max" placeholder="Макс. пробег (км)" value="{{ request.GET.mileage_max }}" class="w-full">
+            <select name="fuel_type" class="w-full">
+                <option value="">Все типы топлива</option>
+                <option value="Бензин" {% if request.GET.fuel_type == "Бензин" %}selected{% endif %}>Бензин</option>
+                <option value="Дизель" {% if request.GET.fuel_type == "Дизель" %}selected{% endif %}>Дизель</option>
+                <option value="Электрическая" {% if request.GET.fuel_type == "Электрическая" %}selected{% endif %}>Электрическая</option>
+                <option value="Гибрид" {% if request.GET.fuel_type == "Гибрид" %}selected{% endif %}>Гибрид</option>
+                <option value="Газ" {% if request.GET.fuel_type == "Газ" %}selected{% endif %}>Газ</option>
+            </select>
+            <select name="transmission" class="w-full">
+                <option value="">Все трансмиссии</option>
+                <option value="Механическая" {% if request.GET.transmission == "Механическая" %}selected{% endif %}>Механическая</option>
+                <option value="Автоматическая" {% if request.GET.transmission == "Автоматическая" %}selected{% endif %}>Автоматическая</option>
+                <option value="Робот" {% if request.GET.transmission == "Робот" %}selected{% endif %}>Робот</option>
+                <option value="Вариатор" {% if request.GET.transmission == "Вариатор" %}selected{% endif %}>Вариатор</option>
+            </select>
+            <select name="color" class="w-full">
+                <option value="">Все цвета</option>
+                <option value="Белый" {% if request.GET.color == "Белый" %}selected{% endif %}>Белый</option>
+                <option value="Чёрный" {% if request.GET.color == "Чёрный" %}selected{% endif %}>Чёрный</option>
+                <option value="Серебристый" {% if request.GET.color == "Серебристый" %}selected{% endif %}>Серебристый</option>
+                <option value="Синий" {% if request.GET.color == "Синий" %}selected{% endif %}>Синий</option>
+                <option value="Красный" {% if request.GET.color == "Красный" %}selected{% endif %}>Красный</option>
+            </select>
+            <input type="number" name="engine_capacity_min" placeholder="Mин. объём (л)" step="0.1" value="{{ request.GET.engine_capacity_min }}" class="w-full">
+            <input type="number" name="engine_capacity_max" placeholder="Mакс. объём (л)" step="0.1" value="{{ request.GET.engine_capacity_max }}" class="w-full">
+            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 col-span-full sm:col-span-2 md:col-span-3 lg:col-span-4 mt-2">Применить</button>
+        </form>
+    </details>
+
+    <!-- Отображение активных фильтров -->
+    {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max or request.GET.fuel_type or request.GET.transmission or request.GET.color or request.GET.engine_capacity_min or request.GET.engine_capacity_max %}
+    <div class="mb-4 p-3 rounded bg-blue-100 text-blue-800 text-center text-sm md:text-base">
+        Применённые фильтры:
+        {% if request.GET.q %}
+        Название: "{{ request.GET.q }}"
+        {% endif %}
+        {% if request.GET.condition %}
+        {% if request.GET.q %}, {% endif %}
+        Состояние:
+        {% if request.GET.condition == "new" %}Новый{% else %}Б/у{% endif %}
+        {% endif %}
+        {% if request.GET.price_min %}
+        {% if request.GET.q or request.GET.condition %}, {% endif %}
+        Мин. цена: {{ request.GET.price_min }} ₽
+        {% endif %}
+        {% if request.GET.price_max %}
+        {% if request.GET.q or request.GET.condition or request.GET.price_min %}, {% endif %}
+        Макс. цена: {{ request.GET.price_max }} ₽
+        {% endif %}
+        {% if request.GET.mileage_min %}
+        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max %}, {% endif %}
+        Мин. пробег: {{ request.GET.mileage_min }} км
+        {% endif %}
+        {% if request.GET.mileage_max %}
+        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min %}, {% endif %}
+        Макс. пробег: {{ request.GET.mileage_max }} км
+        {% endif %}
+        {% if request.GET.fuel_type %}
+        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max %}, {% endif %}
+        Тип топлива: {{ request.GET.fuel_type }}
+        {% endif %}
+        {% if request.GET.transmission %}
+        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max or request.GET.fuel_type %}, {% endif %}
+        Трансмиссия: {{ request.GET.transmission }}
+        {% endif %}
+        {% if request.GET.color %}
+        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max or request.GET.fuel_type or request.GET.transmission %}, {% endif %}
+        Цвет: {{ request.GET.color }}
+        {% endif %}
+        {% if request.GET.engine_capacity_min %}
+        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max or request.GET.fuel_type or request.GET.transmission or request.GET.color %}, {% endif %}
+        Мин. объём двигателя: {{ request.GET.engine_capacity_min }} л
+        {% endif %}
+        {% if request.GET.engine_capacity_max %}
+        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max or request.GET.fuel_type or request.GET.transmission or request.GET.color or request.GET.engine_capacity_min %}, {% endif %}
+        Макс. объём двигателя: {{ request.GET.engine_capacity_max }} л
+        {% endif %}
+        <a href="{% url 'car_list' %}" class="ml-2 text-blue-600 hover:underline">Сбросить фильтры</a>
+    </div>
+    {% endif %}
+
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for car in cars %}
         <div class="bg-white rounded-lg shadow-lg p-4 card-hover transition-all">
@@ -31,15 +133,25 @@
                 <img src="{{ photo.photo_url }}" alt="Car Photo" class="carousel-image {% if forloop.first %}active{% endif %}">
                 {% endfor %}
                 {% if car.carphoto_set.all %}
-                <button class="carousel-button left">&larr;</button>
-                <button class="carousel-button right">&rarr;</button>
+                <button class="carousel-button left">←</button>
+                <button class="carousel-button right">→</button>
                 {% endif %}
             </div>
             <h3 class="text-lg font-semibold mt-2">{{ car.brand }} {{ car.model }}</h3>
             <p class="text-gray-600">Год: {{ car.year }}</p>
             <p class="text-gray-600">Цена: {{ car.price }} ₽</p>
             <p class="text-gray-600">Пробег: {{ car.mileage }} км</p>
-            <p class="text-gray-600">Объём двигателя: {{ car.engine_volume }} л</p>
+            <p class="text-gray-600">Объём двигателя: {{ car.engine_capacity }} л</p>
+            <p class="text-gray-600">Состояние:
+                {% if car.condition == "new" %}
+                Новый
+                {% else %}
+                Б/у
+                {% endif %}
+            </p>
+            <p class="text-gray-600">Тип топлива: {{ car.fuel_type }}</p>
+            <p class="text-gray-600">Трансмиссия: {{ car.transmission }}</p>
+            <p class="text-gray-600">Цвет: {{ car.color|default:"Не указан" }}</p>
             <a href="{% url 'car_detail' car.id %}" class="mt-2 inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all">Подробнее</a>
         </div>
         {% empty %}
@@ -71,7 +183,6 @@
             showImage(currentIndex);
         });
 
-        // Автоматическая смена изображений каждые 5 секунд
         setInterval(() => {
             currentIndex = (currentIndex + 1) % images.length;
             showImage(currentIndex);

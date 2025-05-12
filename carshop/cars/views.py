@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from .forms import RegistrationForm, CarForm, UserProfileForm, PurchaseForm
 from .models import User, Car, CarPhoto, PurchaseRequest
 from django.utils import timezone
+from django.db.models import Q
 
 def car_list(request):
     cars = Car.objects.filter(is_sold=False)
@@ -15,6 +16,91 @@ def car_list(request):
         unread_purchases_count = buyer_requests.filter(is_read=False, status__in=['Одобрено', 'Отклонено']).count()
         unread_sales_count = seller_requests.filter(is_read=False, status='В ожидании').count()
         unread_deals_count = unread_purchases_count + unread_sales_count
+    return render(request, 'car_list.html', {'cars': cars, 'unread_deals_count': unread_deals_count})
+
+def car_search(request):
+    cars = Car.objects.filter(is_sold=False)
+    query = request.GET.get('q', '').strip()
+    condition = request.GET.get('condition')
+    price_min = request.GET.get('price_min')
+    price_max = request.GET.get('price_max')
+    mileage_min = request.GET.get('mileage_min')
+    mileage_max = request.GET.get('mileage_max')
+    fuel_type = request.GET.get('fuel_type')
+    transmission = request.GET.get('transmission')
+    color = request.GET.get('color')
+    engine_capacity_min = request.GET.get('engine_capacity_min')  # Исправлено имя параметра
+    engine_capacity_max = request.GET.get('engine_capacity_max')  # Исправлено имя параметра
+
+    # Поиск по названию
+    if query:
+        search_terms = query.split()
+        query_conditions = Q()
+        for term in search_terms:
+            query_conditions |= Q(brand__icontains=term) | Q(model__icontains=term)
+        cars = cars.filter(query_conditions)
+
+    # Фильтрация по состоянию
+    if condition and condition != "":
+        cars = cars.filter(condition=condition)
+
+    # Фильтрация по цене
+    if price_min:
+        try:
+            cars = cars.filter(price__gte=float(price_min))
+        except (ValueError, TypeError):
+            pass
+    if price_max:
+        try:
+            cars = cars.filter(price__lte=float(price_max))
+        except (ValueError, TypeError):
+            pass
+
+    # Фильтрация по пробегу
+    if mileage_min:
+        try:
+            cars = cars.filter(mileage__gte=int(mileage_min))
+        except (ValueError, TypeError):
+            pass
+    if mileage_max:
+        try:
+            cars = cars.filter(mileage__lte=int(mileage_max))
+        except (ValueError, TypeError):
+            pass
+
+    # Фильтрация по типу топлива
+    if fuel_type and fuel_type != "":
+        cars = cars.filter(fuel_type=fuel_type)
+
+    # Фильтрация по трансмиссии
+    if transmission and transmission != "":
+        cars = cars.filter(transmission=transmission)
+
+    # Фильтрация по цвету
+    if color and color != "":
+        cars = cars.filter(color=color)
+
+    # Фильтрация по объёму двигателя
+    if engine_capacity_min:
+        try:
+            # Приведение к float для сравнения с DecimalField
+            cars = cars.filter(engine_capacity__gte=float(engine_capacity_min))
+        except (ValueError, TypeError):
+            pass
+    if engine_capacity_max:
+        try:
+            cars = cars.filter(engine_capacity__lte=float(engine_capacity_max))
+        except (ValueError, TypeError):
+            pass
+
+    unread_deals_count = 0
+    if request.user.is_authenticated:
+        buyer_requests = PurchaseRequest.objects.filter(buyer=request.user).order_by('-request_date')
+        seller_requests = PurchaseRequest.objects.filter(seller=request.user).order_by('-request_date')
+        unread_purchases_count = buyer_requests.filter(is_read=False, status__in=['Одобрено', 'Отклонено']).count()
+        unread_sales_count = seller_requests.filter(is_read=False, status='В ожидании').count()
+        unread_deals_count = unread_purchases_count + unread_sales_count
+
     return render(request, 'car_list.html', {'cars': cars, 'unread_deals_count': unread_deals_count})
 
 def car_detail(request, car_id):

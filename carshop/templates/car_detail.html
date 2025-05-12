@@ -10,17 +10,27 @@
             {% if car.carphoto_set.exists or car.main_photo_url %}
             <div id="carousel-{{ car.id }}" class="carousel-container">
                 {% for photo in car.carphoto_set.all %}
-                <img src="{{ photo.photo_url }}" alt="{{ car.brand }} {{ car.model }}" class="carousel-image">
-                {% endfor %}
+                <img src="{{ photo.photo_url }}" alt="{{ car.brand }} {{ car.model }}" class="carousel-image {% if forloop.first %}active{% endif %}" data-url="{{ photo.photo_url }}">
+                {% empty %}
                 {% if car.main_photo_url %}
-                <img src="{{ car.main_photo_url }}" alt="{{ car.brand }} {{ car.model }}" class="carousel-image">
+                <img src="{{ car.main_photo_url }}" alt="{{ car.brand }} {{ car.model }}" class="carousel-image active" data-url="{{ car.main_photo_url }}">
                 {% endif %}
+                {% endfor %}
                 <button onclick="prevImage('{{ car.id }}')" class="carousel-button left" aria-label="Предыдущее изображение">
                     <i class="fas fa-chevron-left"></i>
                 </button>
                 <button onclick="nextImage('{{ car.id }}')" class="carousel-button right" aria-label="Следующее изображение">
                     <i class="fas fa-chevron-right"></i>
                 </button>
+            </div>
+            <!-- Миниатюры дополнительных фотографий -->
+            <div class="flex overflow-x-auto space-x-2 mt-2">
+                {% for photo in car.carphoto_set.all %}
+                <img src="{{ photo.photo_url }}" alt="Thumbnail" class="w-16 h-16 object-cover rounded-lg cursor-pointer" onclick="swapMainImage('{{ car.id }}', '{{ photo.photo_url }}')">
+                {% endfor %}
+                {% if car.main_photo_url %}
+                <img src="{{ car.main_photo_url }}" alt="Thumbnail" class="w-16 h-16 object-cover rounded-lg cursor-pointer" onclick="swapMainImage('{{ car.id }}', '{{ car.main_photo_url }}')">
+                {% endif %}
             </div>
             {% else %}
             <div class="carousel-container">
@@ -76,16 +86,6 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const carousel = document.getElementById('carousel-{{ car.id }}');
-        if (carousel) {
-            const images = carousel.getElementsByClassName('carousel-image');
-            if (images.length > 0) {
-                images[0].classList.add('active');
-            }
-        }
-    });
-
     const carouselIndices = {};
 
     function showImage(carId, index) {
@@ -119,5 +119,53 @@
         carouselIndices[carId] = ((carouselIndices[carId] || 0) - 1 + images.length) % images.length;
         showImage(carId, carouselIndices[carId]);
     }
+
+    // Новая функция для замены основного изображения при клике на миниатюру
+    function swapMainImage(carId, imageUrl) {
+        const carousel = document.getElementById('carousel-' + carId);
+        const images = carousel.getElementsByClassName('carousel-image');
+        if (images.length === 0) return;
+
+        // Находим индекс изображения с соответствующим URL
+        let targetIndex = -1;
+        for (let i = 0; i < images.length; i++) {
+            if (images[i].getAttribute('data-url') === imageUrl) {
+                targetIndex = i;
+                break;
+            }
+        }
+
+        if (targetIndex !== -1) {
+            carouselIndices[carId] = targetIndex;
+            showImage(carId, targetIndex);
+        }
+    }
+
+    // Функция для открытия изображения на весь экран
+    function openFullscreenImage(imageUrl) {
+        const fullscreenDiv = document.createElement('div');
+        fullscreenDiv.className = 'fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50';
+        fullscreenDiv.innerHTML = `
+            <img src="${imageUrl}" alt="Fullscreen Image" class="max-h-[90vh] max-w-[90vw] object-contain">
+            <button onclick="this.parentElement.remove()" class="absolute top-5 right-5 bg-red-500 rounded-full w-12 h-12 flex items-center justify-center hover:bg-red-600">
+                <span class="text-white text-3xl font-bold">×</span>
+            </button>
+        `;
+        document.body.appendChild(fullscreenDiv);
+    }
+
+
+    // Обработчик клика на карусель для открытия активного изображения
+    document.querySelectorAll('.carousel-container').forEach(carousel => {
+        carousel.addEventListener('click', (e) => {
+            const activeImage = carousel.querySelector('.carousel-image.active');
+            if (activeImage && e.target.classList.contains('carousel-image')) {
+                const imageUrl = activeImage.getAttribute('data-url');
+                if (imageUrl) {
+                    openFullscreenImage(imageUrl);
+                }
+            }
+        });
+    });
 </script>
 {% endblock %}
