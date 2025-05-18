@@ -1,13 +1,43 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="profile-container max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg">
-    <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Редактирование профиля</h2>
-    <form method="post" enctype="multipart/form-data">
+<div class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in">
+    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 text-center">Редактирование профиля</h2>
+    {% if messages %}
+    {% for message in messages %}
+    <div class="mb-4 p-3 rounded {% if message.tags == 'success' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %} text-center text-sm md:text-base">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+    <form method="post" enctype="multipart/form-data" class="space-y-4">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">Сохранить изменения</button>
+        {% if form.errors %}
+        <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-center text-sm md:text-base">
+            {% for field, errors in form.errors.items %}
+            {% for error in errors %}
+            {{ error }}<br>
+            {% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% for field in form %}
+        <div>
+            <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium text-sm md:text-base">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <span class="text-red-500 text-sm">{{ field.errors }}</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <div class="text-center">
+            <button type="submit" class="inline-block bg-blue-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base">
+                Сохранить изменения <i class="fas fa-save ml-2"></i>
+            </button>
+            <a href="{% url 'profile' %}" class="ml-4 inline-block bg-gray-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm md:text-base">
+                Вернуться к профилю <i class="fas fa-arrow-left ml-2"></i>
+            </a>
+        </div>
     </form>
-    <a href="{% url 'profile' %}" class="mt-6 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">Вернуться к профилю</a>
 </div>
 {% endblock %}

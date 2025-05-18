@@ -1,55 +1,36 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block content %}
-<div class="max-w-md mx-auto bg-white rounded-xl shadow-2xl p-6 md:p-8 fade-in">
-    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 text-center">Вход</h2>
-    {% if messages %}
-    {% for message in messages %}
-    {% if message == "Вы успешно вышли из аккаунта." %}
-    <div class="mb-4 p-3 rounded bg-green-100 text-green-800 text-center text-sm md:text-base">
-        {{ message }}
-    </div>
-    {% endif %}
-    {% if message == "Неверное имя пользователя или пароль." %}
-    <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-center text-sm md:text-base">
-        {{ message }}
-    </div>
-    {% endif %}
-    {% endfor %}
-    {% endif %}
-    <form method="post" class="space-y-6">
+<div class="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg">
+    <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Вход</h2>
+    <form method="post">
         {% csrf_token %}
-        <div>
-            <label for="username" class="block text-gray-700 font-medium text-sm md:text-base">Имя пользователя</label>
-            <input type="text" name="username" id="id_username" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base" placeholder="Введите имя пользователя" required>
+        <div class="space-y-4">
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700">Имя пользователя</label>
+                <input type="text" name="username" id="username" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700">Пароль</label>
+                <input type="password" name="password" id="password" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+            </div>
         </div>
-        <div class="relative">
-            <label for="password" class="block text-gray-700 font-medium text-sm md:text-base">Пароль</label>
-            <input type="password" name="password" id="id_password" class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base" placeholder="Введите пароль" required>
-            <button type="button" onclick="togglePassword('id_password')" class="absolute inset-y-0 right-0 flex items-center pr-3 pt-6 text-gray-500 hover:text-blue-600">
-                <i id="eyeIcon_password" class="fas fa-eye text-lg"></i>
+        <div class="mt-6 text-center">
+            <button type="submit" class="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors">
+                Войти
             </button>
+            <a href="{% url 'register' %}" class="ml-4 inline-block px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
+                Регистрация
+            </a>
+            <a href="{% url 'password_reset_request' %}" class="ml-4 inline-block px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors">
+                Забыли пароль?
+            </a>
         </div>
-        <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-all text-base md:text-lg shadow-md hover:shadow-lg">
-            Войти <i class="fas fa-sign-in-alt ml-2 text-lg"></i>
-        </button>
+        {% if messages %}
+            {% for message in messages %}
+                <p class="mt-4 text-center text-red-600">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
     </form>
 </div>
-
-<script>
-    function togglePassword(inputId) {
-        const input = document.getElementById(inputId);
-        const icon = document.getElementById('eyeIcon_' + inputId.split('_')[1]);
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.classList.remove('fa-eye');
-            icon.classList.add('fa-eye-slash');
-        } else {
-            input.type = 'password';
-            icon.classList.remove('fa-eye-slash');
-            icon.classList.add('fa-eye');
-        }
-    }
-</script>
 {% endblock %}

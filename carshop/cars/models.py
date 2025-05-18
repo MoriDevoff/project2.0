@@ -5,6 +5,8 @@ from django.utils import timezone
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils.translation import gettext_lazy as _
 
+import uuid
+
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, email, password, phone=None, **extra_fields):
         if not username:
@@ -14,7 +16,8 @@ class CustomUserManager(BaseUserManager):
         email = self.normalize_email(email)
         user = self.model(username=username, email=email, phone=phone, **extra_fields)
         user.set_password(password)
-        user.balance = 0  # Начальный баланс 0
+        user.balance = 0
+        user.is_verified = extra_fields.get('is_superuser', False)
         user.save()
         return user
 
@@ -42,10 +45,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     date_joined = models.DateTimeField(default=timezone.now)
     avatar_url = models.URLField(blank=True, null=True)
     avatar_file = models.ImageField(upload_to='avatars/', blank=True, null=True)
-    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # Баланс
+    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-    has_new_notifications = models.BooleanField(default=False)  # Поле для уведомлений
+    has_new_notifications = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False)
 
     objects = CustomUserManager()
 
@@ -54,6 +58,9 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.username
+
+    def get_avatar(self):
+        return self.avatar_file.url if self.avatar_file else (self.avatar_url or 'https://avatars.mds.yandex.net/i?id=e54ae3f787cf29aa21be07d6762ecc0dfaa02fa2-5014002-images-thumbs&n=13')
 
     class Meta:
         db_table = 'Users'
@@ -116,14 +123,19 @@ class Car(models.Model):
         return f"{self.brand} {self.model} ({self.year})"
 
     def get_first_photo(self):
-        return self.carphoto_set.first().photo_url if self.carphoto_set.exists() else None
+        first_photo = self.carphoto_set.first()
+        return first_photo.photo_file.url if first_photo and first_photo.photo_file else (first_photo.photo_url if first_photo else None)
 
 class CarPhoto(models.Model):
     car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='carphoto_set')
     photo_url = models.URLField(max_length=200, null=True, blank=True)
+    photo_file = models.ImageField(upload_to='car_photos/', null=True, blank=True)
 
     def __str__(self):
         return f"Photo for {self.car}"
+
+    def get_photo(self):
+        return self.photo_file.url if self.photo_file else self.photo_url
 
 class CarSpecification(models.Model):
     car = models.OneToOneField(Car, on_delete=models.CASCADE)
@@ -161,7 +173,7 @@ class PurchaseRequest(models.Model):
     message = models.TextField(blank=True)
     request_date = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, default='В ожидании', choices=STATUS_CHOICES)
-    is_read = models.BooleanField(default=False)  # Поле для отслеживания прочитанных заявок
+    is_read = models.BooleanField(default=False)
 
     class Meta:
         db_table = 'PurchaseRequests'
@@ -183,3 +195,13 @@ class PriceHistory(models.Model):
 
     class Meta:
         db_table = 'PriceHistory'
+
+class EmailVerification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    token = models.UUIDField(unique=True, default=uuid.uuid4)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expiration_date = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Verification for {self.user.username}"

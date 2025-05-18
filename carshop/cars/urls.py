@@ -1,4 +1,6 @@
 from django.urls import path
+from django.conf import settings
+from django.conf.urls.static import static
 from . import views
 
 urlpatterns = [
@@ -17,4 +19,10 @@ urlpatterns = [
     path('edit_profile/', views.edit_profile, name='edit_profile'),
     path('edit_car/<int:car_id>/', views.edit_car, name='edit_car'),
     path('delete_car/<int:car_id>/', views.delete_car, name='delete_car'),
+    path('verify-email/<str:token>/', views.verify_email, name='verify_email'),
+    path('password-reset/', views.password_reset_request, name='password_reset_request'),
+    path('password-reset/<str:token>/', views.password_reset_confirm, name='password_reset_confirm'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -2,10 +2,16 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from .forms import RegistrationForm, CarForm, UserProfileForm, PurchaseForm
-from .models import User, Car, CarPhoto, PurchaseRequest
+from django.core.mail import send_mail
+from django.conf import settings
+from django.urls import reverse
 from django.utils import timezone
 from django.db.models import Q
+from .forms import RegistrationForm, CarForm, UserProfileForm, PurchaseForm, PasswordResetForm, SetPasswordForm
+from .models import User, Car, CarPhoto, PurchaseRequest, EmailVerification, PriceHistory
+from datetime import timedelta
+import json
+from django.core.serializers.json import DjangoJSONEncoder
 
 def car_list(request):
     cars = Car.objects.filter(is_sold=False)
@@ -29,10 +35,9 @@ def car_search(request):
     fuel_type = request.GET.get('fuel_type')
     transmission = request.GET.get('transmission')
     color = request.GET.get('color')
-    engine_capacity_min = request.GET.get('engine_capacity_min')  # Исправлено имя параметра
-    engine_capacity_max = request.GET.get('engine_capacity_max')  # Исправлено имя параметра
+    engine_capacity_min = request.GET.get('engine_capacity_min')
+    engine_capacity_max = request.GET.get('engine_capacity_max')
 
-    # Поиск по названию
     if query:
         search_terms = query.split()
         query_conditions = Q()
@@ -40,11 +45,9 @@ def car_search(request):
             query_conditions |= Q(brand__icontains=term) | Q(model__icontains=term)
         cars = cars.filter(query_conditions)
 
-    # Фильтрация по состоянию
     if condition and condition != "":
         cars = cars.filter(condition=condition)
 
-    # Фильтрация по цене
     if price_min:
         try:
             cars = cars.filter(price__gte=float(price_min))
@@ -56,7 +59,6 @@ def car_search(request):
         except (ValueError, TypeError):
             pass
 
-    # Фильтрация по пробегу
     if mileage_min:
         try:
             cars = cars.filter(mileage__gte=int(mileage_min))
@@ -68,22 +70,17 @@ def car_search(request):
         except (ValueError, TypeError):
             pass
 
-    # Фильтрация по типу топлива
     if fuel_type and fuel_type != "":
         cars = cars.filter(fuel_type=fuel_type)
 
-    # Фильтрация по трансмиссии
     if transmission and transmission != "":
         cars = cars.filter(transmission=transmission)
 
-    # Фильтрация по цвету
     if color and color != "":
         cars = cars.filter(color=color)
 
-    # Фильтрация по объёму двигателя
     if engine_capacity_min:
         try:
-            # Приведение к float для сравнения с DecimalField
             cars = cars.filter(engine_capacity__gte=float(engine_capacity_min))
         except (ValueError, TypeError):
             pass
@@ -105,7 +102,34 @@ def car_search(request):
 
 def car_detail(request, car_id):
     car = get_object_or_404(Car, id=car_id)
-    return render(request, 'car_detail.html', {'car': car, 'author': car.user})
+    price_history = PriceHistory.objects.filter(car=car).order_by('change_date')
+    price_data = [
+        {
+            'date': entry.change_date,
+            'old_price': float(entry.old_price),
+            'new_price': float(entry.new_price),
+        }
+        for entry in price_history
+    ]
+    if price_history.exists():
+        initial_price = {
+            'date': car.created_at,
+            'old_price': None,
+            'new_price': float(price_history.first().old_price),
+        }
+        price_data.insert(0, initial_price)
+    else:
+        price_data = [{
+            'date': car.created_at,
+            'old_price': None,
+            'new_price': float(car.price),
+        }]
+    price_data_json = json.dumps(price_data, cls=DjangoJSONEncoder)
+    return render(request, 'car_detail.html', {
+        'car': car,
+        'author': car.user,
+        'price_data_json': price_data_json,
+    })
 
 def register(request):
     if request.method == 'POST':
@@ -115,21 +139,57 @@ def register(request):
             user.date_joined = timezone.now()
             user.avatar_url = 'https://avatars.mds.yandex.net/i?id=e54ae3f787cf29aa21be07d6762ecc0dfaa02fa2-5014002-images-thumbs&n=13'
             user.save()
-            messages.success(request, 'Регистрация успешна! Пожалуйста, войдите.')
+
+            if not user.is_superuser:
+                expiration_date = timezone.now() + timedelta(days=settings.ACCOUNT_ACTIVATION_DAYS)
+                verification = EmailVerification.objects.create(
+                    user=user,
+                    expiration_date=expiration_date
+                )
+                verification_link = request.build_absolute_uri(reverse('verify_email', args=[str(verification.token)]))
+                subject = 'Подтверждение регистрации'
+                message = f'Спасибо за регистрацию! Пожалуйста, подтвердите ваш email, перейдя по ссылке: {verification_link}'
+                from_email = settings.DEFAULT_FROM_EMAIL
+                try:
+                    send_mail(subject, message, from_email, [user.email], fail_silently=False)
+                    messages.success(request, 'Регистрация успешна! Проверьте вашу почту для подтверждения email.')
+                except Exception as e:
+                    user.delete()
+                    messages.error(request, 'Ошибка при отправке email. Пожалуйста, попробуйте снова.')
+                    return render(request, 'register.html', {'form': form})
+            else:
+                messages.success(request, 'Регистрация суперюзера успешна! Вы можете войти.')
+
             return redirect('login')
     else:
         form = RegistrationForm()
     return render(request, 'register.html', {'form': form})
+
+def verify_email(request, token):
+    try:
+        verification = EmailVerification.objects.get(token=token, is_used=False, expiration_date__gt=timezone.now())
+        user = verification.user
+        user.is_verified = True
+        user.save()
+        verification.is_used = True
+        verification.save()
+        messages.success(request, 'Ваш email успешно подтвержден! Теперь вы можете войти.')
+        return redirect('login')
+    except EmailVerification.DoesNotExist:
+        messages.error(request, 'Неверный или просроченный токен подтверждения.')
+        return redirect('register')
 
 def login_view(request):
     if request.method == 'POST':
         username = request.POST['username']
         password = request.POST['password']
         user = authenticate(request, username=username, password=password)
-        if user is not None:
+        if user is not None and (user.is_verified or user.is_superuser):
             login(request, user)
             messages.success(request, 'Вы успешно вошли!')
             return redirect('car_list')
+        elif user is not None and not user.is_verified:
+            messages.error(request, 'Ваш email не подтвержден. Проверьте почту.')
         else:
             messages.error(request, 'Неверное имя пользователя или пароль.')
     return render(request, 'login.html')
@@ -142,15 +202,19 @@ def logout_view(request):
 @login_required
 def create_car(request):
     if request.method == 'POST':
-        form = CarForm(request.POST)
+        form = CarForm(request.POST, request.FILES)
         if form.is_valid():
             car = form.save(commit=False)
             car.user = request.user
             car.save()
             photo_urls = form.cleaned_data['photo_urls_list']
+            photo_files = form.cleaned_data['photo_files_list']
             for url in photo_urls:
                 if url:
                     CarPhoto.objects.create(car=car, photo_url=url)
+            for photo_file in photo_files:
+                if photo_file:
+                    CarPhoto.objects.create(car=car, photo_file=photo_file)
             messages.success(request, 'Автомобиль успешно добавлен!')
             return redirect('car_list')
         else:
@@ -275,6 +339,9 @@ def edit_profile(request):
             user = form.save(commit=False)
             if not user.date_joined:
                 user.date_joined = timezone.now()
+            password = form.cleaned_data.get('password')
+            if password:
+                user.set_password(password)
             user.save()
             update_session_auth_hash(request, user)
             messages.success(request, 'Профиль успешно обновлён!')
@@ -290,25 +357,45 @@ def edit_car(request, car_id):
         messages.error(request, 'У вас нет прав для редактирования этого объявления.')
         return redirect('car_detail', car_id=car_id)
     if request.method == 'POST':
-        form = CarForm(request.POST, instance=car)
+        old_price = car.price
+        form = CarForm(request.POST, request.FILES, instance=car)
         if form.is_valid():
             car = form.save(commit=False)
+            new_price = car.price
             car.user = request.user
             car.save()
-            CarPhoto.objects.filter(car=car).delete()
+            if old_price != new_price:
+                PriceHistory.objects.create(
+                    car=car,
+                    old_price=old_price,
+                    new_price=new_price,
+                    changed_by_user=request.user
+                )
+            # Обработка удаления фотографий
+            delete_photo_ids = request.POST.getlist('delete_photos')
+            if delete_photo_ids:
+                CarPhoto.objects.filter(id__in=delete_photo_ids).delete()
+            # Сохранение существующих и новых фото
+            existing_photos = car.carphoto_set.all()
             photo_urls = form.cleaned_data['photo_urls_list']
+            photo_files = form.cleaned_data['photo_files_list']
             for url in photo_urls:
-                if url:
+                if url and not existing_photos.filter(photo_url=url).exists():
                     CarPhoto.objects.create(car=car, photo_url=url)
+            for photo_file in photo_files:
+                if photo_file and not existing_photos.filter(photo_file=photo_file).exists():
+                    CarPhoto.objects.create(car=car, photo_file=photo_file)
             messages.success(request, 'Объявление успешно обновлено!')
             return redirect('car_detail', car_id=car_id)
     else:
         initial_data = {}
-        existing_photos = list(car.carphoto_set.values_list('photo_url', flat=True))
-        for i, url in enumerate(existing_photos[:10], 1):
-            initial_data[f'photo_url_{i}'] = url
+        existing_photos = car.carphoto_set.all()
+        for i, photo in enumerate(existing_photos[:10], 1):
+            if photo.photo_url:
+                initial_data[f'photo_url_{i}'] = photo.photo_url
+            # Для ImageField начальные значения не устанавливаются напрямую
         form = CarForm(instance=car, initial=initial_data)
-    return render(request, 'edit_car.html', {'form': form, 'car': car})
+    return render(request, 'edit_car.html', {'form': form, 'car': car, 'existing_photos': existing_photos})
 
 @login_required
 def delete_car(request, car_id):
@@ -321,3 +408,53 @@ def delete_car(request, car_id):
         messages.success(request, 'Объявление успешно удалено!')
         return redirect('profile')
     return render(request, 'edit_car.html', {'car': car})
+
+def password_reset_request(request):
+    if request.method == 'POST':
+        form = PasswordResetForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            try:
+                user = User.objects.get(email=email)
+                expiration_date = timezone.now() + timedelta(hours=1)
+                verification = EmailVerification.objects.create(
+                    user=user,
+                    expiration_date=expiration_date,
+                    is_used=False
+                )
+                reset_link = request.build_absolute_uri(reverse('password_reset_confirm', args=[str(verification.token)]))
+                subject = 'Сброс пароля'
+                message = f'Перейдите по ссылке для сброса пароля: {reset_link}'
+                from_email = settings.DEFAULT_FROM_EMAIL
+                try:
+                    send_mail(subject, message, from_email, [user.email], fail_silently=False)
+                    messages.success(request, 'Ссылка для сброса пароля отправлена на ваш email.')
+                    return redirect('login')
+                except Exception as e:
+                    messages.error(request, 'Ошибка при отправке email. Пожалуйста, попробуйте снова.')
+                    return render(request, 'password_reset_request.html', {'form': form})
+            except User.DoesNotExist:
+                messages.error(request, 'Пользователь с таким email не найден.')
+    else:
+        form = PasswordResetForm()
+    return render(request, 'password_reset_request.html', {'form': form})
+
+def password_reset_confirm(request, token):
+    try:
+        verification = EmailVerification.objects.get(token=token, is_used=False, expiration_date__gt=timezone.now())
+        if request.method == 'POST':
+            form = SetPasswordForm(request.POST)
+            if form.is_valid():
+                user = verification.user
+                user.set_password(form.cleaned_data['password'])
+                user.save()
+                verification.is_used = True
+                verification.save()
+                messages.success(request, 'Пароль успешно изменен. Теперь вы можете войти.')
+                return redirect('login')
+        else:
+            form = SetPasswordForm()
+        return render(request, 'password_reset_confirm.html', {'form': form})
+    except EmailVerification.DoesNotExist:
+        messages.error(request, 'Неверный или просроченный токен.')
+        return redirect('password_reset_request')

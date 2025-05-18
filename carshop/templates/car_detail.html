@@ -5,16 +5,16 @@
     <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 text-center">
         {{ car.brand }} {{ car.model }} ({{ car.year }})
     </h2>
+    <div class="flex items-center mb-4">
+        <img src="{{ author.get_avatar }}" alt="{{ author.username }}'s avatar" class="w-10 h-10 rounded-full mr-2">
+        <p class="text-gray-600"><strong>Автор:</strong> {{ author.username }}</p>
+    </div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-            {% if car.carphoto_set.exists or car.main_photo_url %}
+            {% if car.carphoto_set.exists %}
             <div id="carousel-{{ car.id }}" class="carousel-container">
                 {% for photo in car.carphoto_set.all %}
-                <img src="{{ photo.photo_url }}" alt="{{ car.brand }} {{ car.model }}" class="carousel-image {% if forloop.first %}active{% endif %}" data-url="{{ photo.photo_url }}">
-                {% empty %}
-                {% if car.main_photo_url %}
-                <img src="{{ car.main_photo_url }}" alt="{{ car.brand }} {{ car.model }}" class="carousel-image active" data-url="{{ car.main_photo_url }}">
-                {% endif %}
+                <img src="{{ photo.get_photo }}" alt="{{ car.brand }} {{ car.model }}" class="carousel-image {% if forloop.first %}active{% endif %}" data-url="{{ photo.get_photo }}">
                 {% endfor %}
                 <button onclick="prevImage('{{ car.id }}')" class="carousel-button left" aria-label="Предыдущее изображение">
                     <i class="fas fa-chevron-left"></i>
@@ -26,11 +26,8 @@
             <!-- Миниатюры дополнительных фотографий -->
             <div class="flex overflow-x-auto space-x-2 mt-2">
                 {% for photo in car.carphoto_set.all %}
-                <img src="{{ photo.photo_url }}" alt="Thumbnail" class="w-16 h-16 object-cover rounded-lg cursor-pointer" onclick="swapMainImage('{{ car.id }}', '{{ photo.photo_url }}')">
+                <img src="{{ photo.get_photo }}" alt="Thumbnail" class="w-16 h-16 object-cover rounded-lg cursor-pointer" onclick="swapMainImage('{{ car.id }}', '{{ photo.get_photo }}')">
                 {% endfor %}
-                {% if car.main_photo_url %}
-                <img src="{{ car.main_photo_url }}" alt="Thumbnail" class="w-16 h-16 object-cover rounded-lg cursor-pointer" onclick="swapMainImage('{{ car.id }}', '{{ car.main_photo_url }}')">
-                {% endif %}
             </div>
             {% else %}
             <div class="carousel-container">
@@ -50,7 +47,7 @@
                 <strong>Трансмиссия:</strong> {{ car.transmission }}
             </p>
             <p class="text-gray-600 mt-2 text-sm md:text-base">
-                <strong>Цвет:</strong> {{ car.color }}
+                <strong>Цвет:</strong> {{ car.color|default:"Не указан" }}
             </p>
             <p class="text-gray-600 mt-2 text-sm md:text-base">
                 <strong>Объем двигателя:</strong> {{ car.engine_capacity }} л
@@ -61,14 +58,52 @@
             <p class="text-gray-600 mt-2 text-sm md:text-base">
                 <strong>Создано:</strong> {{ car.created_at|date:"d.m.Y H:i" }}
             </p>
-            <p class="text-gray-600 mt-2 text-sm md:text-base">
-                <strong>Автор:</strong> {{ author.username }}
-            </p>
             {% if car.is_sold %}
             <p class="text-green-600 mt-2 font-semibold">Продано</p>
             {% endif %}
         </div>
     </div>
+    <h3 class="text-xl font-semibold mt-6 mb-2">История изменения цены</h3>
+    <canvas id="priceChart" class="w-full h-64"></canvas>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const priceData = {{ price_data_json|safe }};
+        const ctx = document.getElementById('priceChart').getContext('2d');
+        const labels = priceData.map(entry => new Date(entry.date).toLocaleDateString());
+        const prices = priceData.map(entry => entry.new_price);
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Цена (₽)',
+                    data: prices,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: true,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Цена (₽)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Дата'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
     <div class="mt-6 text-center">
         <a href="{% url 'car_list' %}" class="inline-block bg-blue-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base">
             Назад к списку <i class="fas fa-arrow-left ml-2"></i>
@@ -120,13 +155,11 @@
         showImage(carId, carouselIndices[carId]);
     }
 
-    // Новая функция для замены основного изображения при клике на миниатюру
     function swapMainImage(carId, imageUrl) {
         const carousel = document.getElementById('carousel-' + carId);
         const images = carousel.getElementsByClassName('carousel-image');
         if (images.length === 0) return;
 
-        // Находим индекс изображения с соответствующим URL
         let targetIndex = -1;
         for (let i = 0; i < images.length; i++) {
             if (images[i].getAttribute('data-url') === imageUrl) {
@@ -141,7 +174,6 @@
         }
     }
 
-    // Функция для открытия изображения на весь экран
     function openFullscreenImage(imageUrl) {
         const fullscreenDiv = document.createElement('div');
         fullscreenDiv.className = 'fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50';
@@ -154,8 +186,6 @@
         document.body.appendChild(fullscreenDiv);
     }
 
-
-    // Обработчик клика на карусель для открытия активного изображения
     document.querySelectorAll('.carousel-container').forEach(carousel => {
         carousel.addEventListener('click', (e) => {
             const activeImage = carousel.querySelector('.carousel-image.active');

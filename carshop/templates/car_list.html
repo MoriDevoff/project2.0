@@ -130,7 +130,7 @@
         <div class="bg-white rounded-lg shadow-lg p-4 card-hover transition-all">
             <div class="carousel-container">
                 {% for photo in car.carphoto_set.all %}
-                <img src="{{ photo.photo_url }}" alt="Car Photo" class="carousel-image {% if forloop.first %}active{% endif %}">
+                <img src="{{ photo.get_photo }}" alt="Car Photo" class="carousel-image {% if forloop.first %}active{% endif %}">
                 {% endfor %}
                 {% if car.carphoto_set.all %}
                 <button class="carousel-button left">←</button>

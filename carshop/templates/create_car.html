@@ -10,7 +10,7 @@
     </div>
     {% endfor %}
     {% endif %}
-    <form method="post" class="space-y-4">
+    <form method="post" enctype="multipart/form-data" class="space-y-4">
         {% csrf_token %}
         {% if form.errors %}
         <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-center text-sm md:text-base">
@@ -25,14 +25,22 @@
         <div>
             <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium text-sm md:text-base">{{ field.label }}</label>
             {{ field }}
+            {% if field.name|slice:":9" == "photo_file" %}
+            <button type="button" class="mt-2 bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors text-sm" onclick="this.previousElementSibling.value = ''; this.parentNode.classList.add('cleared');">Удалить</button>
+            {% endif %}
             {% if field.errors %}
             <span class="text-red-500 text-sm">{{ field.errors }}</span>
             {% endif %}
         </div>
         {% endfor %}
-        <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-all text-sm md:text-base">
-            Опубликовать <i class="fas fa-car ml-2"></i>
-        </button>
+        <div class="text-center">
+            <button type="submit" class="inline-block bg-blue-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base">
+                Опубликовать <i class="fas fa-car ml-2"></i>
+            </button>
+            <a href="{% url 'car_list' %}" class="ml-4 inline-block bg-gray-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm md:text-base">
+                Назад к списку <i class="fas fa-arrow-left ml-2"></i>
+            </a>
+        </div>
     </form>
 </div>
 {% endblock %}
