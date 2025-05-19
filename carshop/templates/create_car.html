@@ -25,7 +25,7 @@
         <div>
             <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium text-sm md:text-base">{{ field.label }}</label>
             {{ field }}
-            {% if field.name|slice:":9" == "photo_file" %}
+            {% if field.name|slice:":10" == "photo_file" %}
             <button type="button" class="mt-2 bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors text-sm" onclick="this.previousElementSibling.value = ''; this.parentNode.classList.add('cleared');">Удалить</button>
             {% endif %}
             {% if field.errors %}

@@ -48,7 +48,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-    has_new_notifications = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
 
     objects = CustomUserManager()
@@ -65,45 +64,27 @@ class User(AbstractBaseUser, PermissionsMixin):
     class Meta:
         db_table = 'Users'
 
-FUEL_TYPE_CHOICES = [
-    ('Бензин', 'Бензин'),
-    ('Дизель', 'Дизель'),
-    ('Электрическая', 'Электрическая'),
-    ('Гибрид', 'Гибрид'),
-    ('Газ', 'Газ'),
-]
-
-TRANSMISSION_CHOICES = [
-    ('Механическая', 'Механическая'),
-    ('Автоматическая', 'Автоматическая'),
-    ('Робот', 'Робот'),
-    ('Вариатор', 'Вариатор'),
-]
-
-BODY_TYPE_CHOICES = [
-    ('Седан', 'Седан'),
-    ('Хетчбек', 'Хетчбек'),
-    ('SUV', 'SUV'),
-    ('Купе', 'Купе'),
-    ('Кабриолет', 'Кабриолет'),
-    ('Минивэн', 'Минивэн'),
-    ('Пикап', 'Пикап'),
-]
-
-DRIVE_TYPE_CHOICES = [
-    ('Передний', 'Передний'),
-    ('Задний', 'Задний'),
-    ('4WD', '4WD'),
-    ('AWD', 'AWD'),
-]
-
-STATUS_CHOICES = [
-    ('В ожидании', 'В ожидании'),
-    ('Одобрено', 'Одобрено'),
-    ('Отклонено', 'Отклонено'),
-]
-
 class Car(models.Model):
+    FUEL_TYPE_CHOICES = [
+        ('Бензин', 'Бензин'),
+        ('Дизель', 'Дизель'),
+        ('Электрическая', 'Электрическая'),
+        ('Гибрид', 'Гибрид'),
+        ('Газ', 'Газ'),
+    ]
+
+    TRANSMISSION_CHOICES = [
+        ('Механическая', 'Механическая'),
+        ('Автоматическая', 'Автоматическая'),
+        ('Робот', 'Робот'),
+        ('Вариатор', 'Вариатор'),
+    ]
+
+    CONDITION_CHOICES = [
+        ('new', 'Новый'),
+        ('used', 'Б/у'),
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     brand = models.CharField(max_length=100)
     model = models.CharField(max_length=100)
@@ -117,27 +98,44 @@ class Car(models.Model):
     description = models.TextField()
     created_at = models.DateTimeField(default=timezone.now)
     is_sold = models.BooleanField(default=False)
-    condition = models.CharField(max_length=20, choices=[('new', 'Новый'), ('used', 'Б/у')], default='used')
+    condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='used')
 
     def __str__(self):
         return f"{self.brand} {self.model} ({self.year})"
 
     def get_first_photo(self):
         first_photo = self.carphoto_set.first()
-        return first_photo.photo_file.url if first_photo and first_photo.photo_file else (first_photo.photo_url if first_photo else None)
+        return first_photo.get_photo() if first_photo else '/media/car_photos/default-car.jpg'
 
 class CarPhoto(models.Model):
     car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='carphoto_set')
-    photo_url = models.URLField(max_length=200, null=True, blank=True)
-    photo_file = models.ImageField(upload_to='car_photos/', null=True, blank=True)
+    photo_url = models.URLField(max_length=200, blank=True, null=True)
+    photo_file = models.ImageField(upload_to='car_photos/', blank=True, null=True)
 
     def __str__(self):
         return f"Photo for {self.car}"
 
     def get_photo(self):
-        return self.photo_file.url if self.photo_file else self.photo_url
+        return self.photo_file.url if self.photo_file else (self.photo_url if self.photo_url else '/media/car_photos/default-car.jpg')
 
 class CarSpecification(models.Model):
+    BODY_TYPE_CHOICES = [
+        ('Седан', 'Седан'),
+        ('Хетчбек', 'Хетчбек'),
+        ('SUV', 'SUV'),
+        ('Купе', 'Купе'),
+        ('Кабриолет', 'Кабриолет'),
+        ('Минивэн', 'Минивэн'),
+        ('Пикап', 'Пикап'),
+    ]
+
+    DRIVE_TYPE_CHOICES = [
+        ('Передний', 'Передний'),
+        ('Задний', 'Задний'),
+        ('4WD', '4WD'),
+        ('AWD', 'AWD'),
+    ]
+
     car = models.OneToOneField(Car, on_delete=models.CASCADE)
     body_type = models.CharField(max_length=20, choices=BODY_TYPE_CHOICES)
     doors = models.IntegerField(validators=[MinValueValidator(2), MaxValueValidator(6)])
@@ -157,7 +155,7 @@ class CarSpecification(models.Model):
 
 class Favorite(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    car = models.ForeignKey(Car, on_delete=models.CASCADE)
+    car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='favorites')  # Добавляем related_name
     added_date = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -165,6 +163,12 @@ class Favorite(models.Model):
         unique_together = ('user', 'car')
 
 class PurchaseRequest(models.Model):
+    STATUS_CHOICES = [
+        ('В ожидании', 'В ожидании'),
+        ('Одобрено', 'Одобрено'),
+        ('Отклонено', 'Отклонено'),
+    ]
+
     car = models.ForeignKey(Car, on_delete=models.CASCADE)
     buyer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='buyer_requests')
     seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='seller_requests')

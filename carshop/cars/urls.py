@@ -22,6 +22,8 @@ urlpatterns = [
     path('verify-email/<str:token>/', views.verify_email, name='verify_email'),
     path('password-reset/', views.password_reset_request, name='password_reset_request'),
     path('password-reset/<str:token>/', views.password_reset_confirm, name='password_reset_confirm'),
+    path('toggle-favorite/<int:car_id>/', views.toggle_favorite, name='toggle_favorite'),
+    path('favorites/', views.favorite_list, name='favorite_list'),
 ]
 
 if settings.DEBUG:

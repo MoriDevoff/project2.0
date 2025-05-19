@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load custom_filters %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in">
@@ -63,6 +64,31 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- Кнопка "Добавить в избранное" и счётчик -->
+    <div class="mt-4 flex items-center space-x-4">
+        {% if request.user.is_authenticated %}
+        <form method="post" action="{% url 'toggle_favorite' car_id=car.id %}">
+            {% csrf_token %}
+            {% if request.user in car.favorite_set.all|map:'user' %}
+            <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 flex items-center text-sm md:text-base">
+                <i class="fas fa-heart mr-2"></i> Удалить из избранного
+            </button>
+            {% else %}
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center text-sm md:text-base">
+                <i class="fas fa-heart mr-2"></i> Добавить в избранное
+            </button>
+            {% endif %}
+        </form>
+        {% endif %}
+
+        <!-- Счётчик избранного -->
+        <div class="flex items-center text-gray-600">
+            <i class="fas fa-heart mr-2"></i>
+            <span>{{ car.favorite_count }} человек добавили в избранное</span>
+        </div>
+    </div>
+
     <h3 class="text-xl font-semibold mt-6 mb-2">История изменения цены</h3>
     <canvas id="priceChart" class="w-full h-64"></canvas>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

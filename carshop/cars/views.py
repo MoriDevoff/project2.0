@@ -6,9 +6,9 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, Count  # Added Count import
 from .forms import RegistrationForm, CarForm, UserProfileForm, PurchaseForm, PasswordResetForm, SetPasswordForm
-from .models import User, Car, CarPhoto, PurchaseRequest, EmailVerification, PriceHistory
+from .models import User, Car, CarPhoto, PurchaseRequest, EmailVerification, PriceHistory, Favorite  # Added Favorite import
 from datetime import timedelta
 import json
 from django.core.serializers.json import DjangoJSONEncoder
@@ -101,7 +101,10 @@ def car_search(request):
     return render(request, 'car_list.html', {'cars': cars, 'unread_deals_count': unread_deals_count})
 
 def car_detail(request, car_id):
-    car = get_object_or_404(Car, id=car_id)
+    car = get_object_or_404(
+        Car.objects.annotate(favorite_count=Count('favorites')),
+        id=car_id
+    )
     price_history = PriceHistory.objects.filter(car=car).order_by('change_date')
     price_data = [
         {
@@ -207,18 +210,23 @@ def create_car(request):
             car = form.save(commit=False)
             car.user = request.user
             car.save()
-            photo_urls = form.cleaned_data['photo_urls_list']
-            photo_files = form.cleaned_data['photo_files_list']
+
+            # Обработка загруженных файлов
+            photo_files = form.cleaned_data.get('photo_files_list', [])
+            for photo in photo_files:
+                CarPhoto.objects.create(car=car, photo_file=photo)
+
+            # Обработка URL-адресов
+            photo_urls = form.cleaned_data.get('photo_urls_list', [])
             for url in photo_urls:
-                if url:
-                    CarPhoto.objects.create(car=car, photo_url=url)
-            for photo_file in photo_files:
-                if photo_file:
-                    CarPhoto.objects.create(car=car, photo_file=photo_file)
+                CarPhoto.objects.create(car=car, photo_url=url)
+
             messages.success(request, 'Автомобиль успешно добавлен!')
             return redirect('car_list')
         else:
             messages.error(request, 'Ошибка при создании объявления. Проверьте введенные данные.')
+            for error in form.errors.values():
+                messages.error(request, error)
     else:
         form = CarForm()
     return render(request, 'create_car.html', {'form': form})
@@ -353,49 +361,54 @@ def edit_profile(request):
 @login_required
 def edit_car(request, car_id):
     car = get_object_or_404(Car, id=car_id)
-    if request.user != car.user:
-        messages.error(request, 'У вас нет прав для редактирования этого объявления.')
-        return redirect('car_detail', car_id=car_id)
+
+    # Проверяем, что пользователь имеет право редактировать этот автомобиль
+    if car.user != request.user:
+        return redirect('car_detail', car_id=car.id)
+
     if request.method == 'POST':
-        old_price = car.price
         form = CarForm(request.POST, request.FILES, instance=car)
         if form.is_valid():
-            car = form.save(commit=False)
-            new_price = car.price
-            car.user = request.user
-            car.save()
-            if old_price != new_price:
-                PriceHistory.objects.create(
-                    car=car,
-                    old_price=old_price,
-                    new_price=new_price,
-                    changed_by_user=request.user
-                )
-            # Обработка удаления фотографий
-            delete_photo_ids = request.POST.getlist('delete_photos')
-            if delete_photo_ids:
-                CarPhoto.objects.filter(id__in=delete_photo_ids).delete()
-            # Сохранение существующих и новых фото
-            existing_photos = car.carphoto_set.all()
-            photo_urls = form.cleaned_data['photo_urls_list']
-            photo_files = form.cleaned_data['photo_files_list']
+            # Сохраняем изменения в самом объекте Car
+            car = form.save()
+
+            # Удаление отмеченных фото
+            for key in form.cleaned_data:
+                if key.startswith('delete_photo_') and form.cleaned_data[key]:
+                    photo_id = key.replace('delete_photo_', '')
+                    CarPhoto.objects.filter(id=photo_id, car=car).delete()
+
+            # Получаем текущие URL-адреса фото из базы данных
+            existing_photos = CarPhoto.objects.filter(car=car, photo_url__isnull=False)
+            existing_urls = set(photo.photo_url for photo in existing_photos)
+
+            # Получаем новые URL из формы
+            photo_urls = form.cleaned_data.get('photo_urls_list', [])
+
+            # Добавляем только новые URL, которых ещё нет в базе
             for url in photo_urls:
-                if url and not existing_photos.filter(photo_url=url).exists():
+                if url and url not in existing_urls:
                     CarPhoto.objects.create(car=car, photo_url=url)
+                    existing_urls.add(url)  # Обновляем множество для следующей итерации
+
+            # Добавление новых фото (файлы)
+            photo_files = form.cleaned_data.get('photo_files_list', [])
             for photo_file in photo_files:
-                if photo_file and not existing_photos.filter(photo_file=photo_file).exists():
-                    CarPhoto.objects.create(car=car, photo_file=photo_file)
-            messages.success(request, 'Объявление успешно обновлено!')
-            return redirect('car_detail', car_id=car_id)
+                CarPhoto.objects.create(car=car, photo_file=photo_file)
+
+            return redirect('car_detail', car_id=car.id)
     else:
+        # Заполняем форму существующими данными
         initial_data = {}
-        existing_photos = car.carphoto_set.all()
-        for i, photo in enumerate(existing_photos[:10], 1):
-            if photo.photo_url:
+        # Заполняем поля photo_url_X существующими URL
+        existing_photos = CarPhoto.objects.filter(car=car, photo_url__isnull=False)
+        for i, photo in enumerate(existing_photos, 1):
+            if i <= 10:  # Ограничиваем до 10 полей
                 initial_data[f'photo_url_{i}'] = photo.photo_url
-            # Для ImageField начальные значения не устанавливаются напрямую
+
         form = CarForm(instance=car, initial=initial_data)
-    return render(request, 'edit_car.html', {'form': form, 'car': car, 'existing_photos': existing_photos})
+
+    return render(request, 'edit_car.html', {'form': form, 'car': car})
 
 @login_required
 def delete_car(request, car_id):
@@ -458,3 +471,34 @@ def password_reset_confirm(request, token):
     except EmailVerification.DoesNotExist:
         messages.error(request, 'Неверный или просроченный токен.')
         return redirect('password_reset_request')
+
+@login_required
+def toggle_favorite(request, car_id):
+    car = get_object_or_404(Car, id=car_id)
+    favorite, created = Favorite.objects.get_or_create(user=request.user, car=car)
+
+    if not created:
+        # Если запись уже существует, удаляем её
+        favorite.delete()
+        messages.success(request, 'Объявление удалено из избранного.')
+    else:
+        messages.success(request, 'Объявление добавлено в избранное.')
+
+    # Возвращаемся на страницу объявления
+    return redirect('car_detail', car_id=car.id)
+
+@login_required
+def favorite_list(request):
+    favorites = Favorite.objects.filter(user=request.user).order_by('-added_date')
+    unread_deals_count = 0
+    if request.user.is_authenticated:
+        buyer_requests = PurchaseRequest.objects.filter(buyer=request.user).order_by('-request_date')
+        seller_requests = PurchaseRequest.objects.filter(seller=request.user).order_by('-request_date')
+        unread_purchases_count = buyer_requests.filter(is_read=False, status__in=['Одобрено', 'Отклонено']).count()
+        unread_sales_count = seller_requests.filter(is_read=False, status='В ожидании').count()
+        unread_deals_count = unread_purchases_count + unread_sales_count
+
+    return render(request, 'favorite_list.html', {
+        'favorites': favorites,
+        'unread_deals_count': unread_deals_count,
+    })

@@ -132,9 +132,12 @@
                 {% for photo in car.carphoto_set.all %}
                 <img src="{{ photo.get_photo }}" alt="Car Photo" class="carousel-image {% if forloop.first %}active{% endif %}">
                 {% endfor %}
-                {% if car.carphoto_set.all %}
+                {% if car.carphoto_set.all|length > 1 %}
                 <button class="carousel-button left">←</button>
                 <button class="carousel-button right">→</button>
+                {% endif %}
+                {% if not car.carphoto_set.all %}
+                <img src="/media/car_photos/default-car.jpg" alt="Default Car Photo" class="carousel-image active">
                 {% endif %}
             </div>
             <h3 class="text-lg font-semibold mt-2">{{ car.brand }} {{ car.model }}</h3>
@@ -173,12 +176,12 @@
             });
         };
 
-        container.querySelector('.carousel-button.left').addEventListener('click', () => {
+        container.querySelector('.carousel-button.left')?.addEventListener('click', () => {
             currentIndex = (currentIndex - 1 + images.length) % images.length;
             showImage(currentIndex);
         });
 
-        container.querySelector('.carousel-button.right').addEventListener('click', () => {
+        container.querySelector('.carousel-button.right')?.addEventListener('click', () => {
             currentIndex = (currentIndex + 1) % images.length;
             showImage(currentIndex);
         });
