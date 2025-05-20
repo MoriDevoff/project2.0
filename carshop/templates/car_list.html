@@ -31,10 +31,18 @@
         <button type="submit" class="ml-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Поиск</button>
     </form>
 
-    <!-- Компактная вкладка с фильтрами -->
-    <details class="mb-4 bg-white rounded-lg shadow-md p-4">
-        <summary class="text-lg font-semibold text-gray-700 cursor-pointer pb-2 border-b border-gray-200">Фильтры</summary>
-        <form method="get" action="{% url 'car_search' %}" class="search-form mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+    <!-- Кнопка Фильтры для авторизованных пользователей -->
+    {% if user.is_authenticated %}
+    <div class="mb-4 flex justify-center">
+        <button id="toggleFilters" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 flex items-center">
+            <span class="mr-2">Фильтры</span>
+            <i class="fas fa-chevron-down" id="filterIcon"></i>
+        </button>
+    </div>
+
+    <!-- Панель фильтров -->
+    <div id="filtersPanel" class="mb-4 bg-white rounded-lg shadow-md p-4 hidden">
+        <form method="get" action="{% url 'car_search' %}" class="search-form grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
             <select name="condition" class="w-full">
                 <option value="">Все состояния</option>
                 <option value="new" {% if request.GET.condition == "new" %}selected{% endif %}>Новый</option>
@@ -71,7 +79,8 @@
             <input type="number" name="engine_capacity_max" placeholder="Mакс. объём (л)" step="0.1" value="{{ request.GET.engine_capacity_max }}" class="w-full">
             <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 col-span-full sm:col-span-2 md:col-span-3 lg:col-span-4 mt-2">Применить</button>
         </form>
-    </details>
+    </div>
+    {% endif %}
 
     <!-- Отображение активных фильтров -->
     {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max or request.GET.fuel_type or request.GET.transmission or request.GET.color or request.GET.engine_capacity_min or request.GET.engine_capacity_max %}
@@ -153,7 +162,7 @@
                 {% endif %}
             </p>
             <p class="text-gray-600">Тип топлива: {{ car.fuel_type }}</p>
-            <p class="text-gray-600">Трансмиссия: {{ car.transmission }}</p>
+            <p class "text-gray-600">Трансмиссия: {{ car.transmission }}</p>
             <p class="text-gray-600">Цвет: {{ car.color|default:"Не указан" }}</p>
             <a href="{% url 'car_detail' car.id %}" class="mt-2 inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all">Подробнее</a>
         </div>
@@ -164,6 +173,23 @@
 </div>
 
 <script>
+    // Toggle filters panel
+    const toggleFilters = document.getElementById('toggleFilters');
+    const filtersPanel = document.getElementById('filtersPanel');
+    const filterIcon = document.getElementById('filterIcon');
+    if (toggleFilters && filtersPanel) {
+        toggleFilters.addEventListener('click', () => {
+            filtersPanel.classList.toggle('hidden');
+            if (filtersPanel.classList.contains('hidden')) {
+                filterIcon.classList.remove('fa-chevron-up');
+                filterIcon.classList.add('fa-chevron-down');
+            } else {
+                filterIcon.classList.remove('fa-chevron-down');
+                filterIcon.classList.add('fa-chevron-up');
+            }
+        });
+    }
+
     document.querySelectorAll('.carousel-container').forEach(container => {
         const images = container.querySelectorAll('.carousel-image');
         if (images.length === 0) return;

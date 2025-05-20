@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in">
+    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 text-center">Управление пользователями</h2>
+    <form method="post" class="mb-6">
+        {% csrf_token %}
+        <div class="mb-4">
+            <label for="user-autocomplete" class="block text-gray-700">Пользователь</label>
+            <input type="text" name="user" id="user-autocomplete" class="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="off" value="{{ form.user.value|default_if_none:'' }}">
+            <ul id="user-suggestions" class="bg-white border rounded-lg mt-1 max-h-40 overflow-y-auto hidden"></ul>
+            {% if form.user.errors %}
+            <p class="text-red-600 text-sm">{{ form.user.errors }}</p>
+            {% endif %}
+        </div>
+        <div class="mb-4">
+            <label for="id_action" class="block text-gray-700">Действие</label>
+            {{ form.action }}
+        </div>
+        <div class="mb-4">
+            <label for="id_block_reason" class="block text-gray-700">Причина блокировки</label>
+            {{ form.block_reason }}
+        </div>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Выполнить действие</button>
+    </form>
+    <table class="w-full text-left border-collapse">
+        <thead>
+        <tr class="bg-gray-200">
+            <th class="p-2 border">Имя пользователя</th>
+            <th class="p-2 border">Email</th>
+            <th class="p-2 border">Баланс</th>
+            <th class="p-2 border">Статус</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for user in users %}
+        <tr class="hover:bg-gray-100">
+            <td class="p-2 border">{{ user.username }}</td>
+            <td class="p-2 border">{{ user.email }}</td>
+            <td class="p-2 border">{{ user.balance }} ₽</td>
+            <td class="p-2 border">
+                {% if user.is_active %}
+                Активен
+                {% else %}
+                Заблокирован
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const userInput = document.getElementById('user-autocomplete');
+    const suggestionsList = document.getElementById('user-suggestions');
+    const users = [
+        {% for user in users %}
+        "{{ user.username }}",
+        {% endfor %}
+    ];
+
+    userInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        suggestionsList.innerHTML = '';
+        if (query.length === 0) {
+            suggestionsList.classList.add('hidden');
+            return;
+        }
+
+        const filteredUsers = users.filter(user => user.toLowerCase().includes(query));
+        if (filteredUsers.length > 0) {
+            suggestionsList.classList.remove('hidden');
+            filteredUsers.forEach(user => {
+                const li = document.createElement('li');
+                li.className = 'p-2 hover:bg-gray-100 cursor-pointer';
+                li.textContent = user;
+                li.addEventListener('click', () => {
+                    userInput.value = user;
+                    suggestionsList.classList.add('hidden');
+                });
+                suggestionsList.appendChild(li);
+            });
+        } else {
+            suggestionsList.classList.add('hidden');
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!userInput.contains(e.target) && !suggestionsList.contains(e.target)) {
+            suggestionsList.classList.add('hidden');
+        }
+    });
+</script>
+{% endblock %}

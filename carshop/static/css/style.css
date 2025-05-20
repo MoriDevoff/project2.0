@@ -1,102 +1,103 @@
-.relative {
+.gradient-bg {
+    background: linear-gradient(135deg, #1e3c72, #2a5298);
+}
+
+.card-hover:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-out {
+    animation: fadeOut 0.5s ease-out forwards;
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+main {
+    flex: 1 0 auto;
+    padding-bottom: 150px;
+}
+
+footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #1F2937;
+    z-index: 1000;
+    padding: 0.5rem 0;
+}
+
+footer p {
+    margin: 0;
+    line-height: 1.2;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="password"],
+input[type="number"],
+input[type="url"],
+select,
+textarea {
+    width: 100%;
+    padding: 0.25rem 0.5rem;
+    background-color: #e6f0fa;
+    border: 2px solid #4b5e7d;
+    border-radius: 0.375rem;
+    outline: none;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    height: auto;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="tel"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="url"]:focus,
+select:focus,
+textarea:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 5px rgba(37, 99, 235, 0.3);
+}
+
+nav a {
     position: relative;
-}
-
-.relative button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.max-w-md {
-    background: linear-gradient(145deg, #ffffff, #f1f5f9);
-    border: 1px solid #e5e7eb;
-}
-
-button[type="submit"] {
-    font-weight: 600;
-    transition: background-color 0.3s ease, transform 0.1s ease;
-}
-
-button[type="submit"]:hover {
-    transform: translateY(-2px);
-}
-
-.profile-container {
-    max-width: 600px;
-    margin: 50px auto;
-    padding: 20px;
-    background-color: #f9f9f9;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.profile-container h2 {
-    text-align: center;
-    color: #333;
-    margin-bottom: 20px;
-}
-
-.profile-info {
-    font-size: 16px;
-    line-height: 1.6;
-}
-
-.profile-info p {
-    margin: 10px 0;
-}
-
-.btn {
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #007bff;
-    color: white;
+    padding: 0.5rem 1rem;
+    border: 2px solid #ffffff;
+    border-radius: 0.375rem;
+    color: #ffffff;
     text-decoration: none;
-    border-radius: 5px;
-    margin-top: 20px;
-    text-align: center;
+    transition: color 0.3s, border-color 0.3s;
 }
 
-.btn:hover {
-    background-color: #0056b3;
-}
-
-.btn-reset {
-    background-color: #6b7280;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 5px;
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.1s ease;
-}
-
-.btn-reset:hover {
-    background-color: #4b5563;
-    transform: translateY(-2px);
-}
-
-.badge {
-    padding: 5px 10px;
-    border-radius: 50%;
-    font-size: 12px;
-    margin-left: 5px;
-}
-
-.bg-danger {
-    background-color: #dc3545;
-    color: white;
-}
-
-.bg-warning {
-    background-color: #ffc107;
-    color: black;
-}
-
-.bg-yellow-100 {
-    background-color: #fefcbf !important;
 }
 
 /* Новые стили для JavaScript-элементов */
@@ -218,7 +219,7 @@ button[type="submit"]:hover {
 }
 
 .sidebar:not(.open) {
-    transform: translateY(-50%) translateX(-160px);
+    transform: translateY(-50%) translateX(-200px);
 }
 
 .sidebar.open {

@@ -24,6 +24,13 @@ urlpatterns = [
     path('password-reset/<str:token>/', views.password_reset_confirm, name='password_reset_confirm'),
     path('toggle-favorite/<int:car_id>/', views.toggle_favorite, name='toggle_favorite'),
     path('favorites/', views.favorite_list, name='favorite_list'),
+    path('manage/users/', views.manage_users, name='manage_users'),
+    path('manage/ads/', views.manage_ads, name='manage_ads'),
+    path('manage/balances/', views.manage_balances, name='manage_balances'),
+    path('car/<int:car_id>/chat/request/', views.send_chat_request, name='send_chat_request'),
+    path('chat/accept/<int:request_id>/', views.accept_chat_request, name='accept_chat_request'),
+    path('chat/<int:request_id>/', views.chat, name='chat'),
+    path('blocked/', views.blocked, name='blocked'),
 ]
 
 if settings.DEBUG:

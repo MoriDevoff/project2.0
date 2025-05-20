@@ -37,29 +37,32 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // 4. Выдвигающаяся панель
-    const sidebar = document.createElement('div');
-    sidebar.classList.add('sidebar');
-    sidebar.innerHTML = `
-        <div class="sidebar-tab">☰ Панель</div>
-        <div class="sidebar-content">
-            <h3>Быстрые действия</h3>
-            <ul>
-                <li><a href="${window.urls.car_list}">Список автомобилей</a></li>
-                <li><a href="${window.urls.profile}">Профиль</a></li>
-                <li><a href="${window.urls.create_car}">Добавить автомобиль</a></li>
-                <li><a href="${window.urls.favorite_list}">Избранное</a></li>
-            </ul>
-        </div>
-    `;
-    document.body.appendChild(sidebar);
+    // 4. Выдвигающаяся панель (для обычных пользователей)
+    console.log('isAuthenticated:', window.isAuthenticated); // Для отладки
+    if (window.isAuthenticated === 'true') { // Сравниваем как строку
+        const sidebar = document.createElement('div');
+        sidebar.classList.add('sidebar');
+        sidebar.innerHTML = `
+            <div class="sidebar-tab">☰ Панель</div>
+            <div class="sidebar-content">
+                <h3>Быстрые действия</h3>
+                <ul>
+                    <li><a href="${window.urls.car_list}">Список автомобилей</a></li>
+                    <li><a href="${window.urls.profile}">Профиль</a></li>
+                    <li><a href="${window.urls.create_car}">Добавить автомобиль</a></li>
+                    <li><a href="${window.urls.favorite_list}">Избранное</a></li>
+                </ul>
+            </div>
+        `;
+        document.body.appendChild(sidebar);
 
-    const sidebarTab = sidebar.querySelector('.sidebar-tab');
-    sidebarTab.addEventListener('click', () => {
-        sidebar.classList.toggle('open');
-    });
+        const sidebarTab = sidebar.querySelector('.sidebar-tab');
+        sidebarTab.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+        });
+    }
 
-    // 5. Проверка корректности данных
+    // 6. Проверка корректности данных
     function validateInput(input, regex, errorMessage) {
         input.addEventListener('input', () => {
             if (!regex.test(input.value) && input.value !== '') {

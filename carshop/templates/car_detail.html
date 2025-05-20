@@ -24,7 +24,6 @@
                     <i class="fas fa-chevron-right"></i>
                 </button>
             </div>
-            <!-- Миниатюры дополнительных фотографий -->
             <div class="flex overflow-x-auto space-x-2 mt-2">
                 {% for photo in car.carphoto_set.all %}
                 <img src="{{ photo.get_photo }}" alt="Thumbnail" class="w-16 h-16 object-cover rounded-lg cursor-pointer" onclick="swapMainImage('{{ car.id }}', '{{ photo.get_photo }}')">
@@ -65,7 +64,6 @@
         </div>
     </div>
 
-    <!-- Кнопка "Добавить в избранное" и счётчик -->
     <div class="mt-4 flex items-center space-x-4">
         {% if request.user.is_authenticated %}
         <form method="post" action="{% url 'toggle_favorite' car_id=car.id %}">
@@ -82,7 +80,6 @@
         </form>
         {% endif %}
 
-        <!-- Счётчик избранного -->
         <div class="flex items-center text-gray-600">
             <i class="fas fa-heart mr-2"></i>
             <span>{{ car.favorite_count }} человек добавили в избранное</span>
@@ -130,6 +127,35 @@
             }
         });
     </script>
+
+    {% if request.user.is_authenticated and not car.is_sold and request.user != author %}
+    <h3 class="text-xl font-semibold mt-6 mb-2">Чат</h3>
+    {% if chat_request and chat_request.status == 'accepted' %}
+    <div class="chat-container bg-gray-100 p-4 rounded-lg">
+        <div class="messages max-h-64 overflow-y-auto mb-4">
+            {% for message in chat_messages %}
+            <p class="text-gray-800 mb-2 {% if message.sender == request.user %}text-right{% endif %}">
+                <strong>{{ message.sender.username }}:</strong> {{ message.content }} ({{ message.timestamp|date:"d.m.Y H:i" }})
+            </p>
+            {% endfor %}
+        </div>
+        <form method="post" action="{% url 'car_detail' car_id=car.id %}">
+            {% csrf_token %}
+            {{ message_form.as_p }}
+            <button type="submit" name="chat_message" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 mt-2">Отправить</button>
+        </form>
+    </div>
+    {% elif chat_request and chat_request.status == 'pending' %}
+    <p class="text-yellow-600">Запрос на чат отправлен. Ожидайте подтверждения от продавца.</p>
+    {% else %}
+    <form method="post" action="{% url 'send_chat_request' car_id=car.id %}">
+        {% csrf_token %}
+        {{ chat_form.as_p }}
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 mt-2">Написать продавцу</button>
+    </form>
+    {% endif %}
+    {% endif %}
+
     <div class="mt-6 text-center">
         <a href="{% url 'car_list' %}" class="inline-block bg-blue-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base">
             Назад к списку <i class="fas fa-arrow-left ml-2"></i>

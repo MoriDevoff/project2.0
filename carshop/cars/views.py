@@ -6,9 +6,9 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
-from django.db.models import Q, Count  # Added Count import
-from .forms import RegistrationForm, CarForm, UserProfileForm, PurchaseForm, PasswordResetForm, SetPasswordForm
-from .models import User, Car, CarPhoto, PurchaseRequest, EmailVerification, PriceHistory, Favorite  # Added Favorite import
+from django.db.models import Q, Count
+from .forms import RegistrationForm, CarForm, UserProfileForm, PurchaseForm, PasswordResetForm, SetPasswordForm, ChatRequestForm, ManageBalanceForm, ManageUserForm
+from .models import User, Car, CarPhoto, PurchaseRequest, EmailVerification, PriceHistory, Favorite, ChatRequest, Message
 from datetime import timedelta
 import json
 from django.core.serializers.json import DjangoJSONEncoder
@@ -187,20 +187,28 @@ def login_view(request):
         username = request.POST['username']
         password = request.POST['password']
         user = authenticate(request, username=username, password=password)
-        if user is not None and (user.is_verified or user.is_superuser):
+        if user is not None:
+            if not user.is_active:
+                return redirect('blocked', block_reason=user.block_reason or "Не указана")
+            if not user.is_verified and not user.is_superuser:
+                messages.error(request, 'Ваш email не подтвержден. Проверьте почту.')
+                return render(request, 'login.html')
             login(request, user)
             messages.success(request, 'Вы успешно вошли!')
             return redirect('car_list')
-        elif user is not None and not user.is_verified:
-            messages.error(request, 'Ваш email не подтвержден. Проверьте почту.')
         else:
             messages.error(request, 'Неверное имя пользователя или пароль.')
     return render(request, 'login.html')
 
+def blocked(request, block_reason=None):
+    if not request.user.is_authenticated or request.user.is_active:
+        return redirect('car_list')
+    return render(request, 'blocked.html', {'block_reason': block_reason})
+
 def logout_view(request):
     logout(request)
-    messages.success(request, 'Вы успешно вышли из аккаунта.')
-    return redirect('login')
+    messages.success(request, 'Вы успешно вышли из системы!')
+    return redirect('car_list')
 
 @login_required
 def create_car(request):
@@ -486,6 +494,146 @@ def toggle_favorite(request, car_id):
 
     # Возвращаемся на страницу объявления
     return redirect('car_detail', car_id=car.id)
+
+@login_required
+def manage_users(request):
+    if not request.user.is_superuser:
+        messages.error(request, 'У вас нет прав для доступа к этой странице.')
+        return redirect('car_list')
+    users = User.objects.all()
+    if request.method == 'POST':
+        form = ManageUserForm(request.POST)
+        if form.is_valid():
+            user = form.cleaned_data['user']  # Получаем объект User
+            action = form.cleaned_data['action']
+            if user == request.user:
+                messages.error(request, 'Вы не можете выполнить это действие над самим собой.')
+                return render(request, 'manage_users.html', {'users': users, 'form': form})
+            if action == 'block':
+                reason = form.cleaned_data['block_reason']
+                if not reason:
+                    messages.error(request, 'Укажите причину блокировки.')
+                    return render(request, 'manage_users.html', {'users': users, 'form': form})
+                user.is_active = False
+                user.block_reason = reason
+                user.save()
+                messages.success(request, f'Пользователь {user.username} заблокирован. Причина: {reason}')
+            elif action == 'unblock':
+                user.is_active = True
+                user.block_reason = ''
+                user.save()
+                messages.success(request, f'Пользователь {user.username} разблокирован')
+            elif action == 'delete':
+                user.delete()
+                messages.success(request, f'Пользователь {user.username} удалён')
+            return redirect('manage_users')
+    else:
+        form = ManageUserForm()
+    return render(request, 'manage_users.html', {'users': users, 'form': form})
+
+@login_required
+def manage_ads(request):
+    if not request.user.is_superuser:
+        messages.error(request, 'У вас нет прав для доступа к этой странице.')
+        return redirect('car_list')
+    cars = Car.objects.all()
+    if request.method == 'POST':
+        author_filter = request.POST.get('author_filter', '')
+        if author_filter:
+            cars = cars.filter(user__username__icontains=author_filter)
+        car_id = request.POST.get('car_id')
+        action = request.POST.get('action')
+        if car_id and action:
+            car = get_object_or_404(Car, id=car_id)
+            if action == 'edit':
+                form = CarForm(request.POST, request.FILES, instance=car)
+                if form.is_valid():
+                    form.save()
+                    messages.success(request, f'Объявление {car.brand} {car.model} обновлено')
+                    return redirect('manage_ads')
+            elif action == 'delete':
+                car.delete()
+                messages.success(request, f'Объявление {car.brand} {car.model} удалено')
+    return render(request, 'manage_ads.html', {'cars': cars})
+
+@login_required
+def manage_balances(request):
+    if not request.user.is_superuser:
+        messages.error(request, 'У вас нет прав для доступа к этой странице.')
+        return redirect('car_list')
+    users = User.objects.all()
+    if request.method == 'POST':
+        form = ManageBalanceForm(request.POST)
+        if form.is_valid():
+            user = form.cleaned_data['user']  # Получаем объект User
+            amount = form.cleaned_data['amount']
+            action = form.cleaned_data['action']
+            if amount <= 0:
+                messages.error(request, 'Сумма должна быть больше 0.')
+                return render(request, 'manage_balances.html', {'users': users, 'form': form})
+            if action == 'add':
+                user.balance += amount
+                messages.success(request, f'Баланс пользователя {user.username} увеличен на {amount} ₽')
+            elif action == 'subtract':
+                if user.balance >= amount:
+                    user.balance -= amount
+                    messages.success(request, f'Баланс пользователя {user.username} уменьшен на {amount} ₽')
+                else:
+                    messages.error(request, 'Недостаточно средств для списания')
+                    return render(request, 'manage_balances.html', {'users': users, 'form': form})
+            user.save()
+            return redirect('manage_balances')
+    else:
+        form = ManageBalanceForm()
+    return render(request, 'manage_balances.html', {'users': users, 'form': form})
+
+@login_required
+def send_chat_request(request, car_id):
+    if not request.user.is_authenticated:
+        messages.error(request, 'Войдите в аккаунт для отправки запроса.')
+        return redirect('login')
+    car = get_object_or_404(Car, id=car_id)
+    if request.user == car.user:
+        messages.error(request, 'Вы не можете отправить запрос на свой автомобиль.')
+        return redirect('car_detail', car_id=car_id)
+    if request.method == 'POST':
+        form = ChatRequestForm(request.POST)
+        if form.is_valid():
+            chat_request = form.save(commit=False)
+            chat_request.car = car
+            chat_request.sender = request.user
+            chat_request.receiver = car.user
+            chat_request.save()
+            messages.success(request, 'Запрос на чат отправлен продавцу!')
+            return redirect('car_detail', car_id=car_id)
+    else:
+        form = ChatRequestForm()
+    return render(request, 'car_detail.html', {'car': car, 'chat_form': form})
+
+@login_required
+def accept_chat_request(request, request_id):
+    chat_request = get_object_or_404(ChatRequest, id=request_id, receiver=request.user, status='pending')
+    if request.method == 'POST':
+        chat_request.status = 'accepted'
+        chat_request.save()
+        Message.objects.create(chat_request=chat_request, sender=request.user, content='Чат начат!')
+        messages.success(request, 'Чат с покупателем открыт!')
+        return redirect('chat', chat_request.id)
+    return redirect('profile')
+
+@login_required
+def chat(request, request_id):
+    chat_request = get_object_or_404(ChatRequest, id=request_id, status='accepted')
+    if request.user not in [chat_request.sender, chat_request.receiver] and not request.user.is_superuser:
+        messages.error(request, 'У вас нет доступа к этому чату.')
+        return redirect('car_list')
+    messages = Message.objects.filter(chat_request=chat_request).order_by('timestamp')
+    if request.method == 'POST':
+        content = request.POST.get('message')
+        if content:
+            Message.objects.create(chat_request=chat_request, sender=request.user, content=content)
+            return redirect('chat', request_id=request_id)
+    return render(request, 'chat.html', {'chat_request': chat_request, 'messages': messages})
 
 @login_required
 def favorite_list(request):

@@ -229,6 +229,142 @@
                 max-width: 90%;
             }
         }
+        .admin-sidebar {
+            position: fixed;
+            top: 0;
+            right: -250px;
+            width: 250px;
+            height: 100%;
+            background-color: #1a202c;
+            color: white;
+            transition: right 0.3s ease;
+            z-index: 1000;
+        }
+        .admin-sidebar.open {
+            right: 0;
+        }
+        .admin-tab {
+            position: absolute;
+            left: -40px;
+            top: 150px;
+            background-color: #2d3748;
+            padding: 10px;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            cursor: pointer;
+            border-radius: 5px 0 0 5px;
+        }
+        .admin-sidebar-content {
+            padding: 20px;
+            height: 100%;
+            overflow-y: auto;
+        }
+        .admin-sidebar-content h3 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .admin-sidebar-content ul {
+            list-style: none;
+        }
+        .admin-sidebar-content ul li {
+            margin-bottom: 0.5rem;
+        }
+        .admin-sidebar-content ul li a {
+            color: #a0aec0;
+            display: block;
+            padding: 0.5rem;
+            border-radius: 5px;
+        }
+        .admin-sidebar-content ul li a:hover {
+            background-color: #2d3748;
+            color: #ffffff;
+        }
+        .sticker {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: white;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 300px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        .sticker.info {
+            background-color: #3b82f6;
+        }
+        .sticker.success {
+            background-color: #10b981;
+        }
+        .sticker.error {
+            background-color: #ef4444;
+        }
+        .sticker-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .sticker.fade-out {
+            animation: fadeOut 0.3s ease-out forwards;
+        }
+        /* Добавляем стили для обычной боковой панели */
+        .sidebar {
+            position: fixed;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+        .sidebar-tab {
+            position: absolute;
+            top: 0;
+            right: -40px;
+            background-color: #2563eb;
+            color: white;
+            padding: 10px;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+        }
+        .sidebar-content {
+            background-color: #1f2937;
+            color: white;
+            padding: 20px;
+            width: 200px;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+        }
+        .sidebar-content h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .sidebar-content ul {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar-content li {
+            margin: 10px 0;
+        }
+        .sidebar-content a {
+            color: #93c5fd;
+            text-decoration: none;
+        }
+        .sidebar-content a:hover {
+            color: #fbbf24;
+        }
+        .sidebar:not(.open) {
+            transform: translateY(-50%) translateX(-200px);
+        }
+        .sidebar.open {
+            transform: translateY(-50%) translateX(0);
+        }
     </style>
 </head>
 <body class="bg-gray-50 font-sans text-gray-800">
@@ -238,8 +374,8 @@
             <img src="{% static 'logo.png' %}" alt="EDEM Logo" class="h-14 md:h-16">
         </a>
         <nav class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-6 text-center">
+            {% if user.is_authenticated and user.is_active %}
             <a href="{% url 'car_list' %}" class="hover:text-yellow-300 transition-colors">Главная</a>
-            {% if user.is_authenticated %}
             <a href="{% url 'create_car' %}" class="hover:text-yellow-300 transition-colors">Добавить объявление</a>
             <a href="{% url 'profile' %}" class="relative hover:text-yellow-300 transition-colors">
                 Профиль
@@ -247,6 +383,7 @@
                 <span class="notification-badge">{{ unread_deals_count }}</span>
                 {% endif %}
             </a>
+            <a href="{% url 'favorite_list' %}" class="hover:text-yellow-300 transition-colors">Избранное</a>
             <a href="{% url 'logout' %}" class="hover:text-yellow-300 transition-colors">Выйти</a>
             {% else %}
             <a href="{% url 'login' %}" class="hover:text-yellow-300 transition-colors">Войти</a>
@@ -255,6 +392,21 @@
         </nav>
     </div>
 </header>
+{% if user.is_authenticated and user.is_active %}
+{% if user.is_superuser %}
+<div class="admin-sidebar" id="adminSidebar">
+    <div class="admin-tab" id="adminTab">Администратор</div>
+    <div class="admin-sidebar-content">
+        <h3>Админ-панель</h3>
+        <ul>
+            <li><a href="{% url 'manage_users' %}">Управление пользователями</a></li>
+            <li><a href="{% url 'manage_ads' %}">Управление объявлениями</a></li>
+            <li><a href="{% url 'manage_balances' %}">Управление балансами</a></li>
+        </ul>
+    </div>
+</div>
+{% endif %}
+{% endif %}
 <main class="container mx-auto py-6 md:py-10 px-4">
     {% if messages %}
     <div class="messages">
@@ -265,6 +417,13 @@
         </div>
         {% endfor %}
     </div>
+    {% endif %}
+    {% if user.is_authenticated and not user.is_active %}
+    {% if request.path != '/blocked/' and request.path != '/logout/' %}
+    <script>
+        window.location.href = "{% url 'blocked' %}?reason={{ user.block_reason|urlencode }}";
+    </script>
+    {% endif %}
     {% endif %}
     {% block content %}
     {% endblock %}
@@ -303,16 +462,25 @@
     window.addEventListener('load', () => {
         adjustMainPadding();
         autoRemoveMessages();
+
+        const adminTab = document.getElementById('adminTab');
+        const adminSidebar = document.getElementById('adminSidebar');
+        if (adminTab && adminSidebar) {
+            adminTab.addEventListener('click', () => {
+                adminSidebar.classList.toggle('open');
+            });
+        }
     });
     window.addEventListener('resize', adjustMainPadding);
 
-    // Pass Django URLs to JavaScript
     window.urls = {
         car_list: "{% url 'car_list' %}",
         create_car: "{% url 'create_car' %}",
         profile: "{% url 'profile' %}",
         favorite_list: "{% url 'favorite_list' %}"
     };
+    window.isAuthenticated = "{{ user.is_authenticated|lower }}";
+    window.isSuperuser = "{{ user.is_superuser|lower }}";
 </script>
 <script src="{% static 'js/site.js' %}"></script>
 </body>

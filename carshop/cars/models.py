@@ -20,6 +20,7 @@ class CustomUserManager(BaseUserManager):
         user.is_verified = extra_fields.get('is_superuser', False)
         user.save()
         return user
+    pass
 
     def create_superuser(self, username, email, password, phone=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
@@ -49,6 +50,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
+    block_reason = models.TextField(blank=True, null=True)  # New field for block reason
 
     objects = CustomUserManager()
 
@@ -209,3 +211,33 @@ class EmailVerification(models.Model):
 
     def __str__(self):
         return f"Verification for {self.user.username}"
+
+class ChatRequest(models.Model):
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_chat_requests')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_chat_requests')
+    car = models.ForeignKey(Car, on_delete=models.CASCADE)
+    message = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('accepted', 'Accepted')], default='pending')
+    timestamp = models.DateTimeField(auto_now_add=True)  # Убедитесь, что это поле существует
+
+    def __str__(self):
+        return f"{self.sender.username} -> {self.receiver.username} ({self.status})"
+
+class Message(models.Model):
+    chat_request = models.ForeignKey(ChatRequest, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'Messages'
+
+class Chat(models.Model):
+    sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
+    receiver = models.ForeignKey(User, related_name='received_messages', on_delete=models.CASCADE)
+    car = models.ForeignKey('Car', on_delete=models.CASCADE)
+    message = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.sender.username} to {self.receiver.username}: {self.message[:20]}'

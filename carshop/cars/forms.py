@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model, password_validation
 from django.core.exceptions import ValidationError
-from .models import Car, User, PurchaseRequest, CarPhoto
+from .models import Car, User, PurchaseRequest, CarPhoto, ChatRequest, Message
 
 User = get_user_model()
 
@@ -70,15 +70,13 @@ class CarForm(forms.ModelForm):
     photo_file_9 = forms.ImageField(label='Фото 9', required=False, widget=forms.ClearableFileInput())
     photo_file_10 = forms.ImageField(label='Фото 10', required=False, widget=forms.ClearableFileInput())
 
-    # Новые поля для удаления существующих фото
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             field.widget.attrs.update({'class': 'w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'})
 
-        # Добавляем чекбоксы для удаления существующих фото
-        if self.instance and self.instance.pk:  # Проверяем, что объект Car существует
-            existing_photos = self.instance.carphoto_set.all()[:10]  # Ограничиваем до 10 фото
+        if self.instance and self.instance.pk:
+            existing_photos = self.instance.carphoto_set.all()[:10]
             for i, photo in enumerate(existing_photos, 1):
                 self.fields[f'delete_photo_{photo.id}'] = forms.BooleanField(
                     label=f'Удалить фото {i}',
@@ -114,18 +112,11 @@ class CarForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        photo_urls = [
-            cleaned_data.get(f'photo_url_{i}') for i in range(1, 11)
-        ]
-        photo_files = [
-            cleaned_data.get(f'photo_file_{i}') for i in range(1, 11)
-        ]
+        photo_urls = [cleaned_data.get(f'photo_url_{i}') for i in range(1, 11)]
+        photo_files = [cleaned_data.get(f'photo_file_{i}') for i in range(1, 11)]
 
-        # Проверяем, останутся ли фото после удаления
         existing_photos = self.instance.carphoto_set.all() if self.instance and self.instance.pk else []
-        photos_to_delete = [
-            key for key in cleaned_data if key.startswith('delete_photo_') and cleaned_data[key]
-        ]
+        photos_to_delete = [key for key in cleaned_data if key.startswith('delete_photo_') and cleaned_data[key]]
         remaining_photos = len(existing_photos) - len(photos_to_delete)
         new_photos = sum(1 for url in photo_urls if url) + sum(1 for file in photo_files if file)
 
@@ -221,3 +212,49 @@ class SetPasswordForm(forms.Form):
         if password and confirm_password and password != confirm_password:
             raise forms.ValidationError('Пароли не совпадают.')
         return cleaned_data
+
+class ChatRequestForm(forms.ModelForm):
+    class Meta:
+        model = ChatRequest
+        fields = ['message']
+        labels = {'message': 'Сообщение продавцу'}
+        widgets = {'message': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Напишите сообщение продавцу'})}
+
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = ['content']
+        labels = {'content': 'Сообщение'}
+        widgets = {'content': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Введите сообщение'})}
+
+class ManageBalanceForm(forms.Form):
+    user = forms.CharField(
+        label='Пользователь',
+        widget=forms.TextInput(attrs={'id': 'user-autocomplete', 'autocomplete': 'off'})
+    )
+    amount = forms.DecimalField(max_digits=12, decimal_places=2, label='Сумма')
+    action = forms.ChoiceField(choices=[('add', 'Добавить'), ('subtract', 'Списать')], label='Действие')
+
+    def clean_user(self):
+        username = self.cleaned_data.get('user')
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            raise ValidationError('Пользователь с таким именем не найден.')
+        return user
+
+class ManageUserForm(forms.Form):
+    user = forms.CharField(
+        label='Пользователь',
+        widget=forms.TextInput(attrs={'id': 'user-autocomplete', 'autocomplete': 'off'})
+    )
+    action = forms.ChoiceField(choices=[('block', 'Заблокировать'), ('unblock', 'Разблокировать'), ('delete', 'Удалить')], label='Действие')
+    block_reason = forms.CharField(max_length=255, label='Причина блокировки', required=False)
+
+    def clean_user(self):
+        username = self.cleaned_data.get('user')
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            raise ValidationError('Пользователь с таким именем не найден.')
+        return user
