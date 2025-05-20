@@ -7,6 +7,8 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 from django.db.models import Q, Count
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from .forms import RegistrationForm, CarForm, UserProfileForm, PurchaseForm, PasswordResetForm, SetPasswordForm, ChatRequestForm, ManageBalanceForm, ManageUserForm
 from .models import User, Car, CarPhoto, PurchaseRequest, EmailVerification, PriceHistory, Favorite, ChatRequest, Message
 from datetime import timedelta
@@ -143,6 +145,7 @@ def register(request):
             user.avatar_url = 'https://avatars.mds.yandex.net/i?id=e54ae3f787cf29aa21be07d6762ecc0dfaa02fa2-5014002-images-thumbs&n=13'
             user.save()
 
+            # Проверка, является ли пользователь суперюзером
             if not user.is_superuser:
                 expiration_date = timezone.now() + timedelta(days=settings.ACCOUNT_ACTIVATION_DAYS)
                 verification = EmailVerification.objects.create(
@@ -155,15 +158,27 @@ def register(request):
                 from_email = settings.DEFAULT_FROM_EMAIL
                 try:
                     send_mail(subject, message, from_email, [user.email], fail_silently=False)
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({'success': True, 'message': 'Регистрация успешна! Проверьте вашу почту для подтверждения email.'})
                     messages.success(request, 'Регистрация успешна! Проверьте вашу почту для подтверждения email.')
                 except Exception as e:
                     user.delete()
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({'success': False, 'error': 'Ошибка при отправке email. Пожалуйста, попробуйте снова.'}, status=500)
                     messages.error(request, 'Ошибка при отправке email. Пожалуйста, попробуйте снова.')
                     return render(request, 'register.html', {'form': form})
             else:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': True, 'message': 'Регистрация суперюзера успешна! Вы можете войти.'})
                 messages.success(request, 'Регистрация суперюзера успешна! Вы можете войти.')
 
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True})
             return redirect('login')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': form.errors.as_json()}, status=400)
+            return render(request, 'register.html', {'form': form})
     else:
         form = RegistrationForm()
     return render(request, 'register.html', {'form': form})
@@ -301,13 +316,12 @@ def purchase_car(request, car_id):
     if PurchaseRequest.objects.filter(car=car, buyer=request.user, status='В ожидании').exists():
         messages.error(request, 'Вы уже подали заявку на покупку этого автомобиля.')
         return redirect('car_detail', car_id=car.id)
-    if request.method == 'POST':
+    if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         form = PurchaseForm(request.POST)
         if form.is_valid():
             offered_price = form.cleaned_data.get('offered_price') or car.price
             if request.user.balance < offered_price:
-                messages.error(request, 'Недостаточно средств на балансе для покупки.')
-                return render(request, 'purchase_car.html', {'form': form, 'car': car})
+                return JsonResponse({'status': 'error', 'message': 'Недостаточно средств на балансе для покупки.'}, status=400)
             purchase_request = form.save(commit=False)
             purchase_request.car = car
             purchase_request.buyer = request.user
@@ -315,7 +329,8 @@ def purchase_car(request, car_id):
             purchase_request.is_read = False
             purchase_request.save()
             messages.success(request, 'Заявка на покупку отправлена продавцу!')
-            return redirect('car_detail', car_id=car.id)
+            return JsonResponse({'status': 'success', 'message': 'Заявка на покупку отправлена!'})
+        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
     else:
         form = PurchaseForm(initial={'offered_price': car.price})
     return render(request, 'purchase_car.html', {'form': form, 'car': car})
@@ -650,3 +665,9 @@ def favorite_list(request):
         'favorites': favorites,
         'unread_deals_count': unread_deals_count,
     })
+
+@require_POST
+def check_email_availability(request):
+    email = request.POST.get('email', '').strip()
+    is_available = not User.objects.filter(email=email).exists()
+    return JsonResponse({'is_available': is_available, 'email': email})

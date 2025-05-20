@@ -13,7 +13,7 @@
     {% endif %}
     {% endfor %}
     {% endif %}
-    <form method="post" class="space-y-6">
+    <form method="post" id="registrationForm" class="space-y-6">
         {% csrf_token %}
         <div>
             <label class="block text-gray-700 font-medium text-sm md:text-base">{{ form.username.label }}</label>
@@ -25,6 +25,7 @@
         <div>
             <label class="block text-gray-700 font-medium text-sm md:text-base">{{ form.email.label }}</label>
             {{ form.email }}
+            <span id="email-error" class="text-red-500 text-sm"></span>
             {% if form.email.errors %}
             <p class="text-red-600 text-sm mt-1">{{ form.email.errors.as_text }}</p>
             {% endif %}
@@ -62,6 +63,7 @@
         <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-all text-base md:text-lg shadow-md hover:shadow-lg">
             Зарегистрироваться <i class="fas fa-user-plus ml-2 text-lg"></i>
         </button>
+        <div id="loading" class="hidden text-center"><i class="fas fa-spinner fa-spin"></i> Загрузка...</div>
     </form>
 </div>
 
@@ -79,23 +81,86 @@
 </style>
 
 <script>
-    document.getElementById('togglePasswordButton').addEventListener('click', function() {
-        const passwordInput = document.getElementById('id_password');
-        const confirmPasswordInput = document.getElementById('id_confirm_password');
+    document.addEventListener('DOMContentLoaded', function () {
+        const emailInput = document.querySelector('#id_email');
+        const errorSpan = document.getElementById('email-error');
+        const form = document.getElementById('registrationForm');
+        const loading = document.getElementById('loading');
+        const togglePasswordButton = document.getElementById('togglePasswordButton');
         const eyeIcon = document.getElementById('eyeIcon');
         const toggleText = document.getElementById('toggleText');
 
-        if (passwordInput.type === 'password') {
-            passwordInput.type = 'text';
-            confirmPasswordInput.type = 'text';
-            eyeIcon.className = 'fas fa-eye-slash text-lg mr-2';
-            toggleText.textContent = 'Скрыть пароль';
-        } else {
-            passwordInput.type = 'password';
-            confirmPasswordInput.type = 'password';
-            eyeIcon.className = 'fas fa-eye text-lg mr-2';
-            toggleText.textContent = 'Показать пароль';
-        }
+        // Показать/скрыть пароль
+        togglePasswordButton.addEventListener('click', function() {
+            const passwordInput = document.getElementById('id_password');
+            const confirmPasswordInput = document.getElementById('id_confirm_password');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                confirmPasswordInput.type = 'text';
+                eyeIcon.className = 'fas fa-eye-slash text-lg mr-2';
+                toggleText.textContent = 'Скрыть пароль';
+            } else {
+                passwordInput.type = 'password';
+                confirmPasswordInput.type = 'password';
+                eyeIcon.className = 'fas fa-eye text-lg mr-2';
+                toggleText.textContent = 'Показать пароль';
+            }
+        });
+
+        // Проверка уникальности email
+        emailInput.addEventListener('input', function () {
+            const email = this.value.trim();
+            if (email) {
+                fetch('/check-email/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    },
+                    body: `email=${encodeURIComponent(email)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.is_available) {
+                        errorSpan.textContent = '';
+                    } else {
+                        errorSpan.textContent = 'Этот email уже зарегистрирован.';
+                    }
+                })
+                .catch(error => console.error('Ошибка:', error));
+            } else {
+                errorSpan.textContent = '';
+            }
+        });
+
+        // Асинхронная отправка формы
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            loading.classList.remove('hidden');
+            const formData = new FormData(this);
+
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+                body: new URLSearchParams(formData).toString()
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.classList.add('hidden');
+                if (data.success) {
+                    alert('Регистрация успешна!');
+                    window.location.href = '{% url "login" %}';
+                } else {
+                    alert('Ошибка: ' + (data.error || 'Проверьте введенные данные'));
+                }
+            })
+            .catch(error => {
+                loading.classList.add('hidden');
+                console.error('Ошибка:', error);
+            });
+        });
     });
 </script>
 {% endblock %}
