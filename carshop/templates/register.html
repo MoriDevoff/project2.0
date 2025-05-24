@@ -48,12 +48,16 @@
             <label class="block text-gray-700 font-medium text-sm md:text-base">{{ form.confirm_password.label }}</label>
             {{ form.confirm_password }}
             <span id="confirm-password-error" class="text-red-500 text-sm"></span>
+            {% if form.confirm_password.errors %}
+            <p class="text-red-600 text-sm mt-1">{{ form.confirm_password.errors.as_text }}</p>
+            {% endif %}
         </div>
         {% if form.non_field_errors %}
         <div class="text-red-600 text-sm mt-1">
             {{ form.non_field_errors.as_text }}
         </div>
         {% endif %}
+        <div id="errorContainer" class="text-red-600 text-sm mt-1"></div>
         <button type="button" id="togglePasswordButton" class="w-full flex items-center justify-center bg-gray-300 text-gray-700 p-2 rounded-lg hover:bg-gray-400 transition-all text-sm md:text-base">
             <i id="eyeIcon" class="fas fa-eye text-lg mr-2"></i>
             <span id="toggleText">Показать пароль</span>
@@ -76,6 +80,16 @@
         -webkit-appearance: none;
         appearance: none;
     }
+    /* Ускоряем анимацию загрузки */
+    #loading {
+        transition: opacity 0.2s ease-in-out;
+    }
+    #loading.hidden {
+        opacity: 0;
+    }
+    #loading:not(.hidden) {
+        opacity: 1;
+    }
 </style>
 
 <script>
@@ -84,6 +98,7 @@
         const errorSpan = document.getElementById('email-error');
         const form = document.getElementById('registrationForm');
         const loading = document.getElementById('loading');
+        const errorContainer = document.getElementById('errorContainer');
         const togglePasswordButton = document.getElementById('togglePasswordButton');
         const eyeIcon = document.getElementById('eyeIcon');
         const toggleText = document.getElementById('toggleText');
@@ -162,27 +177,42 @@
                 return;
             }
             loading.classList.remove('hidden');
+            errorContainer.innerHTML = ''; // Очищаем предыдущие ошибки
             const formData = new FormData(this);
-
             fetch(window.location.href, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
-                body: new URLSearchParams(formData).toString()
+                body: formData
             })
             .then(response => response.json())
             .then(data => {
                 loading.classList.add('hidden');
                 if (data.success) {
-                    alert('Регистрация успешна!');
-                    window.location.href = '{% url "login" %}';
+                    window.location.href = '{% url "login" %}'; // Убрали alert
                 } else {
-                    alert('Ошибка: ' + (data.error || 'Проверьте введенные данные'));
+                    if (data.error) {
+                        if (typeof data.error === 'string') {
+                            errorContainer.innerHTML = data.error;
+                        } else {
+                            const errors = JSON.parse(data.error);
+                            for (const field in errors) {
+                                const fieldErrors = errors[field];
+                                fieldErrors.forEach(error => {
+                                    errorContainer.innerHTML += `<p>${field}: ${error.message}</p>`;
+                                });
+                            }
+                        }
+                    } else {
+                        errorContainer.innerHTML = 'Проверьте введенные данные';
+                    }
                 }
             })
             .catch(error => {
                 loading.classList.add('hidden');
+                errorContainer.innerHTML = 'Ошибка сервера. Попробуйте снова.';
                 console.error('Ошибка:', error);
             });
         });

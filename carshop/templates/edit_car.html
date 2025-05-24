@@ -70,32 +70,32 @@
         <!-- Поля для новых фото (URL) -->
         <div>
             <h2 class="text-xl font-semibold mt-6 mb-2">Добавить новые фото (URL)</h2>
-            {% for i in "123456789"|add:"10"|make_list %}
-                {% with field_name="photo_url_"|add:i %}
-                <div class="mb-4">
-                    <label for="{{ form|lookup:field_name|attr:'id_for_label' }}" class="block text-gray-700 font-semibold mb-1">{{ form|lookup:field_name|attr:'label' }}</label>
-                    {{ form|lookup:field_name }}
-                    {% if form|lookup:field_name|attr:'errors' %}
-                        <span class="text-red-500 text-sm">{{ form|lookup:field_name|attr:'errors' }}</span>
-                    {% endif %}
-                </div>
-                {% endwith %}
+            {% for field in form %}
+            {% if field.name|startswith:"photo_url_" %}
+            <div class="mb-4">
+                <label for="{{ field.id_for_label }}" class="block text-gray-700 font-semibold mb-1">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <span class="text-red-500 text-sm">{{ field.errors }}</span>
+                {% endif %}
+            </div>
+            {% endif %}
             {% endfor %}
         </div>
 
         <!-- Поля для новых фото (файлы) -->
         <div>
             <h2 class="text-xl font-semibold mt-6 mb-2">Добавить новые фото (файлы)</h2>
-            {% for i in "123456789"|add:"10"|make_list %}
-                {% with field_name="photo_file_"|add:i %}
-                <div class="mb-4">
-                    <label for="{{ form|lookup:field_name|attr:'id_for_label' }}" class="block text-gray-700 font-semibold mb-1">{{ form|lookup:field_name|attr:'label' }}</label>
-                    {{ form|lookup:field_name }}
-                    {% if form|lookup:field_name|attr:'errors' %}
-                        <span class="text-red-500 text-sm">{{ form|lookup:field_name|attr:'errors' }}</span>
-                    {% endif %}
-                </div>
-                {% endwith %}
+            {% for field in form %}
+            {% if field.name|startswith:"photo_file_" %}
+            <div class="mb-4">
+                <label for="{{ field.id_for_label }}" class="block text-gray-700 font-semibold mb-1">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <span class="text-red-500 text-sm">{{ field.errors }}</span>
+                {% endif %}
+            </div>
+            {% endif %}
             {% endfor %}
         </div>
 

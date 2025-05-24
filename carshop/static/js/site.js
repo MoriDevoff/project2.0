@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // 6. Проверка корректности данных
+    // 5. Проверка корректности данных
     function validateInput(input, regex, errorMessage) {
         input.addEventListener('input', () => {
             if (!regex.test(input.value) && input.value !== '') {

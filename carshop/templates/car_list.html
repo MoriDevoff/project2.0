@@ -193,7 +193,27 @@
             <p class="text-gray-600">Тип топлива: {{ car.fuel_type }}</p>
             <p class="text-gray-600">Трансмиссия: {{ car.transmission }}</p>
             <p class="text-gray-600">Цвет: {{ car.color|default:"Не указан" }}</p>
-            <a href="{% url 'car_detail' car_id=car.id %}" class="mt-2 inline-block bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm">Подробнее</a>
+            <div class="mt-2 flex justify-between items-center">
+                <a href="{% url 'car_detail' car_id=car.id %}" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm">Подробнее</a>
+                {% if request.user.is_authenticated %}
+                <form method="post" action="{% url 'toggle_favorite' car_id=car.id %}" class="favorite-form">
+                    {% csrf_token %}
+                    {% if car.is_favorited %}
+                    <button type="submit" class="favorite-button favorited bg-red-500 text-white px-3 py-1 rounded flex items-center text-xs md:text-sm">
+                        <i class="fas fa-heart mr-1"></i> Удалить
+                    </button>
+                    {% else %}
+                    <button type="submit" class="favorite-button bg-blue-600 text-white px-3 py-1 rounded flex items-center text-xs md:text-sm">
+                        <i class="fas fa-heart mr-1"></i> Добавить
+                    </button>
+                    {% endif %}
+                </form>
+                <div class="flex items-center text-gray-600 favorite-count text-xs md:text-sm">
+                    <i class="fas fa-heart mr-1"></i>
+                    <span>{{ car.favorite_count }} человек</span>
+                </div>
+                {% endif %}
+            </div>
         </div>
         {% endfor %}
     </div>
@@ -274,6 +294,40 @@
                     showImage(currentIndex);
                 });
             }
+        });
+
+        // Асинхронное переключение избранного с обновлением счетчика
+        document.querySelectorAll('.favorite-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const button = this.querySelector('.favorite-button');
+                const isFavorited = button.classList.contains('favorited');
+                const favoriteCountElement = this.parentElement.querySelector('.favorite-count span');
+
+                fetch(this.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: new FormData(this)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'added') {
+                        button.classList.add('favorited');
+                        button.innerHTML = '<i class="fas fa-heart mr-1"></i> Удалить';
+                        favoriteCountElement.textContent = data.favorite_count + ' человек';
+                    } else if (data.status === 'removed') {
+                        button.classList.remove('favorited');
+                        button.innerHTML = '<i class="fas fa-heart mr-1"></i> Добавить';
+                        favoriteCountElement.textContent = data.favorite_count + ' человек';
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                });
+            });
         });
     });
 </script>

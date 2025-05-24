@@ -20,8 +20,9 @@ from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
+@login_required
 def car_list(request):
-    cars = Car.objects.filter(is_sold=False)
+    cars = Car.objects.filter(is_sold=False).annotate(favorite_count=Count('favorites'))
     unread_deals_count = 0
     if request.user.is_authenticated:
         buyer_requests = PurchaseRequest.objects.filter(buyer=request.user).order_by('-request_date')
@@ -29,10 +30,18 @@ def car_list(request):
         unread_purchases_count = buyer_requests.filter(is_read=False, status__in=['Одобрено', 'Отклонено']).count()
         unread_sales_count = seller_requests.filter(is_read=False, status='В ожидании').count()
         unread_deals_count = unread_purchases_count + unread_sales_count
-    return render(request, 'car_list.html', {'cars': cars, 'unread_deals_count': unread_deals_count})
+
+    # Добавляем поле is_favorited для каждого автомобиля
+    for car in cars:
+        car.is_favorited = Favorite.objects.filter(car=car, user=request.user).exists()
+
+    return render(request, 'car_list.html', {
+        'cars': cars,
+        'unread_deals_count': unread_deals_count
+    })
 
 def car_search(request):
-    cars = Car.objects.filter(is_sold=False)
+    cars = Car.objects.filter(is_sold=False).annotate(favorite_count=Count('favorites'))
     query = request.GET.get('q', '').strip()
     condition = request.GET.get('condition')
     price_min = request.GET.get('price_min')
@@ -105,17 +114,28 @@ def car_search(request):
         unread_sales_count = seller_requests.filter(is_read=False, status='В ожидании').count()
         unread_deals_count = unread_purchases_count + unread_sales_count
 
-    return render(request, 'car_list.html', {'cars': cars, 'unread_deals_count': unread_deals_count})
+    # Добавляем поле is_favorited для каждого автомобиля
+    for car in cars:
+        car.is_favorited = Favorite.objects.filter(car=car, user=request.user).exists()
 
+    return render(request, 'car_list.html', {
+        'cars': cars,
+        'unread_deals_count': unread_deals_count
+    })
+
+@login_required
 def car_detail(request, car_id):
     car = get_object_or_404(
         Car.objects.annotate(favorite_count=Count('favorites')),
         id=car_id
     )
+    # Добавляем поле is_favorited для автомобиля
+    car.is_favorited = Favorite.objects.filter(car=car, user=request.user).exists()
+
     price_history = PriceHistory.objects.filter(car=car).order_by('change_date')
     price_data = [
         {
-            'date': entry.change_date,
+            'date': entry.change_date.isoformat(),
             'old_price': float(entry.old_price),
             'new_price': float(entry.new_price),
         }
@@ -123,18 +143,19 @@ def car_detail(request, car_id):
     ]
     if price_history.exists():
         initial_price = {
-            'date': car.created_at,
+            'date': car.created_at.isoformat(),
             'old_price': None,
             'new_price': float(price_history.first().old_price),
         }
         price_data.insert(0, initial_price)
     else:
         price_data = [{
-            'date': car.created_at,
+            'date': car.created_at.isoformat(),
             'old_price': None,
             'new_price': float(car.price),
         }]
-    price_data_json = json.dumps(price_data, cls=DjangoJSONEncoder)
+    price_data_json = json.dumps(price_data)
+
     return render(request, 'car_detail.html', {
         'car': car,
         'author': car.user,
@@ -431,7 +452,15 @@ def edit_car(request, car_id):
         spec_form = CarSpecificationForm(request.POST, instance=spec)
         if form.is_valid() and spec_form.is_valid():
             with transaction.atomic():
+                old_price = car.price
                 car = form.save()
+                if old_price != car.price:
+                    PriceHistory.objects.create(
+                        car=car,
+                        old_price=old_price,
+                        new_price=car.price,
+                        change_date=timezone.now()
+                    )
                 spec = spec_form.save(commit=False)
                 spec.car = car
                 spec.clean()  # Проверка VIN
@@ -487,13 +516,13 @@ def delete_car(request, car_id):
         if request.user != car.user:
             logger.warning(f"Пользователь {request.user} попытался удалить чужое объявление {car_id}")
             return JsonResponse({'success': False, 'error': 'У вас нет прав для удаления этого объявления'}, status=403)
-        
+
         # Удаляем автомобиль (связанные объекты будут удалены автоматически через сигналы)
         car.delete()
-        
+
         logger.info(f"Объявление {car_id} успешно удалено пользователем {request.user}")
         return JsonResponse({'success': True})
-            
+
     except Car.DoesNotExist:
         logger.error(f"Объявление с id {car_id} не найдено")
         return JsonResponse({'success': False, 'error': 'Объявление не найдено'}, status=404)
@@ -551,20 +580,26 @@ def password_reset_confirm(request, token):
         messages.error(request, 'Неверный или просроченный токен.')
         return redirect('password_reset_request')
 
+@csrf_exempt
 @login_required
 def toggle_favorite(request, car_id):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Метод не разрешён'}, status=405)
+
     car = get_object_or_404(Car, id=car_id)
     favorite, created = Favorite.objects.get_or_create(user=request.user, car=car)
 
     if not created:
-        # Если запись уже существует, удаляем её
         favorite.delete()
-        messages.success(request, 'Объявление удалено из избранного.')
+        status = 'removed'
     else:
-        messages.success(request, 'Объявление добавлено в избранное.')
+        status = 'added'
 
-    # Возвращаемся на страницу объявления
-    return redirect('car_detail', car_id=car.id)
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'status': status, 'favorite_count': car.favorites.count()})
+    else:
+        messages.success(request, 'Объявление добавлено в избранное.' if created else 'Объявление удалено из избранного.')
+        return redirect('car_detail', car_id=car.id)
 
 @login_required
 def manage_users(request):

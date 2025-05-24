@@ -17,6 +17,9 @@ class RegistrationForm(forms.ModelForm):
             'email': 'Электронная почта',
             'phone': 'Телефон',
         }
+        widgets = {
+            'phone': forms.TextInput(attrs={'required': False}),
+        }
 
     def clean_username(self):
         username = self.cleaned_data.get('username')
@@ -73,7 +76,8 @@ class CarForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
-            field.widget.attrs.update({'class': 'w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'})
+            if not field_name.startswith('delete_photo_'):
+                field.widget.attrs.update({'class': 'w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500'})
 
         if self.instance and self.instance.pk:
             existing_photos = self.instance.carphoto_set.all()[:10]
@@ -127,6 +131,7 @@ class CarForm(forms.ModelForm):
         cleaned_data['photo_files_list'] = [file for file in photo_files if file]
         return cleaned_data
 
+# Остальные классы формы (UserProfileForm, PurchaseForm и т.д.) остаются без изменений
 class UserProfileForm(forms.ModelForm):
     avatar_file = forms.ImageField(
         label='Загрузить аватар',
