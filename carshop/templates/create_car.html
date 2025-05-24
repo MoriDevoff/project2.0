@@ -1,46 +1,55 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in">
-    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 text-center">Добавить автомобиль</h2>
-    {% if messages %}
-    {% for message in messages %}
-    <div class="mb-4 p-3 rounded {% if message.tags == 'success' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %} text-center text-sm md:text-base">
-        {{ message }}
-    </div>
-    {% endfor %}
-    {% endif %}
-    <form method="post" enctype="multipart/form-data" class="space-y-4">
-        {% csrf_token %}
-        {% if form.errors %}
-        <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-center text-sm md:text-base">
-            {% for field, errors in form.errors.items %}
-            {% for error in errors %}
-            {{ error }}<br>
-            {% endfor %}
-            {% endfor %}
-        </div>
-        {% endif %}
-        {% for field in form %}
-        <div>
-            <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium text-sm md:text-base">{{ field.label }}</label>
-            {{ field }}
-            {% if field.name|slice:":10" == "photo_file" %}
-            <button type="button" class="mt-2 bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700 transition-colors text-sm" onclick="this.previousElementSibling.value = ''; this.parentNode.classList.add('cleared');">Удалить</button>
-            {% endif %}
-            {% if field.errors %}
-            <span class="text-red-500 text-sm">{{ field.errors }}</span>
-            {% endif %}
+<div class="w-full min-h-[90vh] flex justify-center items-center bg-gray-100">
+    <div class="w-full max-w-3xl bg-white rounded-2xl shadow-2xl p-8 md:p-12 mx-auto">
+        <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-8 text-center">Добавить автомобиль</h2>
+        {% if messages %}
+        {% for message in messages %}
+        <div class="mb-4 p-3 rounded {% if message.tags == 'success' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %} text-center text-base">
+            {{ message }}
         </div>
         {% endfor %}
-        <div class="text-center">
-            <button type="submit" class="inline-block bg-blue-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base">
-                Опубликовать <i class="fas fa-car ml-2"></i>
-            </button>
-            <a href="{% url 'car_list' %}" class="ml-4 inline-block bg-gray-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm md:text-base">
-                Назад к списку <i class="fas fa-arrow-left ml-2"></i>
-            </a>
-        </div>
-    </form>
+        {% endif %}
+        <form method="post" enctype="multipart/form-data" class="space-y-8">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            {{ spec_form.non_field_errors }}
+
+            <!-- Все поля автомобиля (включая фото) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {% for field in form.visible_fields %}
+                <div>
+                    {{ field.label_tag }}
+                    {{ field }}
+                    {% if field.errors %}
+                    <div class="text-red-500 text-sm mt-1">{{ field.errors }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Характеристики -->
+            <div class="mt-8">
+                <h3 class="text-xl font-semibold mb-4">Характеристики</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {% for field in spec_form.visible_fields %}
+                    <div>
+                        {{ field.label_tag }}
+                        {{ field }}
+                        {% if field.errors %}
+                        <div class="text-red-500 text-sm mt-1">{{ field.errors }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="flex space-x-4 mt-10 justify-center">
+                <button type="submit" class="bg-blue-600 text-white text-lg px-8 py-3 rounded-lg hover:bg-blue-700 font-semibold shadow">Опубликовать</button>
+                <a href="{% url 'car_list' %}" class="bg-gray-300 text-gray-700 text-lg px-8 py-3 rounded-lg hover:bg-gray-400 font-semibold shadow">Отмена</a>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}

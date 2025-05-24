@@ -20,7 +20,6 @@ class CustomUserManager(BaseUserManager):
         user.is_verified = extra_fields.get('is_superuser', False)
         user.save()
         return user
-    pass
 
     def create_superuser(self, username, email, password, phone=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
@@ -50,7 +49,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
-    block_reason = models.TextField(blank=True, null=True)  # New field for block reason
+    block_reason = models.TextField(blank=True, null=True)
 
     objects = CustomUserManager()
 
@@ -109,6 +108,14 @@ class Car(models.Model):
         first_photo = self.carphoto_set.first()
         return first_photo.get_photo() if first_photo else '/media/car_photos/default-car.jpg'
 
+    def delete(self, *args, **kwargs):
+        # Удаляем связанные объекты перед удалением автомобиля
+        self.carphoto_set.all().delete()  # Удаляем фото
+        self.favorites.all().delete()  # Удаляем избранное
+        self.purchaserequest_set.all().delete()  # Удаляем запросы на покупку
+        self.pricehistory_set.all().delete()  # Удаляем историю цен
+        super().delete(*args, **kwargs)
+
 class CarPhoto(models.Model):
     car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='carphoto_set')
     photo_url = models.URLField(max_length=200, blank=True, null=True)
@@ -140,8 +147,6 @@ class CarSpecification(models.Model):
 
     car = models.OneToOneField(Car, on_delete=models.CASCADE)
     body_type = models.CharField(max_length=20, choices=BODY_TYPE_CHOICES)
-    doors = models.IntegerField(validators=[MinValueValidator(2), MaxValueValidator(6)])
-    seats = models.IntegerField(validators=[MinValueValidator(2), MaxValueValidator(9)])
     power = models.IntegerField(validators=[MinValueValidator(1)])
     drive_type = models.CharField(max_length=10, choices=DRIVE_TYPE_CHOICES)
     vin = models.CharField(max_length=17, unique=True)
@@ -157,7 +162,7 @@ class CarSpecification(models.Model):
 
 class Favorite(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='favorites')  # Добавляем related_name
+    car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='favorites')
     added_date = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -171,7 +176,7 @@ class PurchaseRequest(models.Model):
         ('Отклонено', 'Отклонено'),
     ]
 
-    car = models.ForeignKey(Car, on_delete=models.CASCADE)
+    car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='purchaserequest_set')
     buyer = models.ForeignKey(User, on_delete=models.CASCADE, related_name='buyer_requests')
     seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='seller_requests')
     offered_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
@@ -193,7 +198,7 @@ class PurchaseRequest(models.Model):
         super().save(*args, **kwargs)
 
 class PriceHistory(models.Model):
-    car = models.ForeignKey(Car, on_delete=models.CASCADE)
+    car = models.ForeignKey(Car, on_delete=models.CASCADE, related_name='pricehistory_set')
     old_price = models.DecimalField(max_digits=12, decimal_places=2)
     new_price = models.DecimalField(max_digits=12, decimal_places=2)
     change_date = models.DateTimeField(auto_now_add=True)
@@ -211,33 +216,3 @@ class EmailVerification(models.Model):
 
     def __str__(self):
         return f"Verification for {self.user.username}"
-
-class ChatRequest(models.Model):
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_chat_requests')
-    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_chat_requests')
-    car = models.ForeignKey(Car, on_delete=models.CASCADE)
-    message = models.TextField(blank=True, null=True)
-    status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('accepted', 'Accepted')], default='pending')
-    timestamp = models.DateTimeField(auto_now_add=True)  # Убедитесь, что это поле существует
-
-    def __str__(self):
-        return f"{self.sender.username} -> {self.receiver.username} ({self.status})"
-
-class Message(models.Model):
-    chat_request = models.ForeignKey(ChatRequest, on_delete=models.CASCADE, related_name='messages')
-    sender = models.ForeignKey(User, on_delete=models.CASCADE)
-    content = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = 'Messages'
-
-class Chat(models.Model):
-    sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
-    receiver = models.ForeignKey(User, related_name='received_messages', on_delete=models.CASCADE)
-    car = models.ForeignKey('Car', on_delete=models.CASCADE)
-    message = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f'{self.sender.username} to {self.receiver.username}: {self.message[:20]}'

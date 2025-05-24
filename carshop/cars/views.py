@@ -9,11 +9,16 @@ from django.utils import timezone
 from django.db.models import Q, Count
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from .forms import RegistrationForm, CarForm, UserProfileForm, PurchaseForm, PasswordResetForm, SetPasswordForm, ChatRequestForm, ManageBalanceForm, ManageUserForm
-from .models import User, Car, CarPhoto, PurchaseRequest, EmailVerification, PriceHistory, Favorite, ChatRequest, Message
+from .forms import RegistrationForm, CarForm, UserProfileForm, PurchaseForm, PasswordResetForm, SetPasswordForm, ManageBalanceForm, ManageUserForm, CarSpecificationForm
+from .models import User, Car, CarPhoto, PurchaseRequest, EmailVerification, PriceHistory, Favorite, CarSpecification
 from datetime import timedelta
 import json
 from django.core.serializers.json import DjangoJSONEncoder
+import logging
+from django.views.decorators.csrf import csrf_exempt
+from django.db import transaction
+
+logger = logging.getLogger(__name__)
 
 def car_list(request):
     cars = Car.objects.filter(is_sold=False)
@@ -227,22 +232,32 @@ def logout_view(request):
 
 @login_required
 def create_car(request):
+    photo_range = range(1, 11)
+    photo_url_fields = [f'photo_url_{i}' for i in photo_range]
+    photo_file_fields = [f'photo_file_{i}' for i in photo_range]
+    form = CarForm()
+    spec_form = CarSpecificationForm()
     if request.method == 'POST':
         form = CarForm(request.POST, request.FILES)
-        if form.is_valid():
-            car = form.save(commit=False)
-            car.user = request.user
-            car.save()
+        spec_form = CarSpecificationForm(request.POST)
+        if form.is_valid() and spec_form.is_valid():
+            with transaction.atomic():
+                car = form.save(commit=False)
+                car.user = request.user
+                car.save()
 
-            # Обработка загруженных файлов
-            photo_files = form.cleaned_data.get('photo_files_list', [])
-            for photo in photo_files:
-                CarPhoto.objects.create(car=car, photo_file=photo)
+                spec = spec_form.save(commit=False)
+                spec.car = car
+                spec.clean()  # Проверка VIN
+                spec.save()
 
-            # Обработка URL-адресов
-            photo_urls = form.cleaned_data.get('photo_urls_list', [])
-            for url in photo_urls:
-                CarPhoto.objects.create(car=car, photo_url=url)
+                photo_files = form.cleaned_data.get('photo_files_list', [])
+                for photo in photo_files:
+                    CarPhoto.objects.create(car=car, photo_file=photo)
+
+                photo_urls = form.cleaned_data.get('photo_urls_list', [])
+                for url in photo_urls:
+                    CarPhoto.objects.create(car=car, photo_url=url)
 
             messages.success(request, 'Автомобиль успешно добавлен!')
             return redirect('car_list')
@@ -250,9 +265,24 @@ def create_car(request):
             messages.error(request, 'Ошибка при создании объявления. Проверьте введенные данные.')
             for error in form.errors.values():
                 messages.error(request, error)
+            for error in spec_form.errors.values():
+                messages.error(request, error)
     else:
         form = CarForm()
-    return render(request, 'create_car.html', {'form': form})
+        spec_form = CarSpecificationForm()
+
+    delete_photo_fields = [name for name in form.fields if name.startswith('delete_photo_')]
+    main_fields = [
+        name for name in form.fields
+        if name not in photo_url_fields + photo_file_fields + delete_photo_fields + ['photo_files_list', 'photo_urls_list']
+    ]
+    return render(request, 'create_car.html', {
+        'form': form,
+        'spec_form': spec_form,
+        'main_fields': main_fields,
+        'photo_url_fields': photo_url_fields,
+        'photo_file_fields': photo_file_fields,
+    })
 
 @login_required
 def profile(request):
@@ -384,66 +414,92 @@ def edit_profile(request):
 @login_required
 def edit_car(request, car_id):
     car = get_object_or_404(Car, id=car_id)
-
-    # Проверяем, что пользователь имеет право редактировать этот автомобиль
     if car.user != request.user:
         return redirect('car_detail', car_id=car.id)
 
+    try:
+        spec = car.carspecification
+    except CarSpecification.DoesNotExist:
+        spec = None
+
+    photo_range = range(1, 11)
+    photo_url_fields = [f'photo_url_{i}' for i in photo_range]
+    photo_file_fields = [f'photo_file_{i}' for i in photo_range]
+
     if request.method == 'POST':
         form = CarForm(request.POST, request.FILES, instance=car)
-        if form.is_valid():
-            # Сохраняем изменения в самом объекте Car
-            car = form.save()
+        spec_form = CarSpecificationForm(request.POST, instance=spec)
+        if form.is_valid() and spec_form.is_valid():
+            with transaction.atomic():
+                car = form.save()
+                spec = spec_form.save(commit=False)
+                spec.car = car
+                spec.clean()  # Проверка VIN
+                spec.save()
 
-            # Удаление отмеченных фото
-            for key in form.cleaned_data:
-                if key.startswith('delete_photo_') and form.cleaned_data[key]:
-                    photo_id = key.replace('delete_photo_', '')
-                    CarPhoto.objects.filter(id=photo_id, car=car).delete()
+                for key in form.cleaned_data:
+                    if key.startswith('delete_photo_') and form.cleaned_data[key]:
+                        photo_id = key.replace('delete_photo_', '')
+                        CarPhoto.objects.filter(id=photo_id, car=car).delete()
 
-            # Получаем текущие URL-адреса фото из базы данных
-            existing_photos = CarPhoto.objects.filter(car=car, photo_url__isnull=False)
-            existing_urls = set(photo.photo_url for photo in existing_photos)
+                existing_photos = CarPhoto.objects.filter(car=car, photo_url__isnull=False)
+                existing_urls = set(photo.photo_url for photo in existing_photos)
+                photo_urls = form.cleaned_data.get('photo_urls_list', [])
+                for url in photo_urls:
+                    if url and url not in existing_urls:
+                        CarPhoto.objects.create(car=car, photo_url=url)
+                        existing_urls.add(url)
 
-            # Получаем новые URL из формы
-            photo_urls = form.cleaned_data.get('photo_urls_list', [])
+                photo_files = form.cleaned_data.get('photo_files_list', [])
+                for photo_file in photo_files:
+                    CarPhoto.objects.create(car=car, photo_file=photo_file)
 
-            # Добавляем только новые URL, которых ещё нет в базе
-            for url in photo_urls:
-                if url and url not in existing_urls:
-                    CarPhoto.objects.create(car=car, photo_url=url)
-                    existing_urls.add(url)  # Обновляем множество для следующей итерации
-
-            # Добавление новых фото (файлы)
-            photo_files = form.cleaned_data.get('photo_files_list', [])
-            for photo_file in photo_files:
-                CarPhoto.objects.create(car=car, photo_file=photo_file)
-
+            messages.success(request, 'Объявление успешно обновлено!')
             return redirect('car_detail', car_id=car.id)
+        else:
+            messages.error(request, 'Ошибка при редактировании объявления. Проверьте введенные данные.')
     else:
-        # Заполняем форму существующими данными
         initial_data = {}
-        # Заполняем поля photo_url_X существующими URL
         existing_photos = CarPhoto.objects.filter(car=car, photo_url__isnull=False)
         for i, photo in enumerate(existing_photos, 1):
-            if i <= 10:  # Ограничиваем до 10 полей
+            if i <= 10:
                 initial_data[f'photo_url_{i}'] = photo.photo_url
 
         form = CarForm(instance=car, initial=initial_data)
+        spec_form = CarSpecificationForm(instance=spec)
 
-    return render(request, 'edit_car.html', {'form': form, 'car': car})
+    return render(request, 'edit_car.html', {
+        'form': form,
+        'spec_form': spec_form,
+        'car': car,
+        'photo_url_fields': photo_url_fields,
+        'photo_file_fields': photo_file_fields,
+    })
 
+@csrf_exempt
 @login_required
 def delete_car(request, car_id):
-    car = get_object_or_404(Car, id=car_id)
-    if request.user != car.user:
-        messages.error(request, 'У вас нет прав для удаления этого объявления.')
-        return redirect('car_detail', car_id=car_id)
-    if request.method == 'POST':
+    if request.method != 'POST' and not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': False, 'error': 'Метод не разрешён'}, status=405)
+    try:
+        logger.info(f"Попытка удаления объявления {car_id} пользователем {request.user}")
+        car = get_object_or_404(Car, id=car_id)
+        if request.user != car.user:
+            logger.warning(f"Пользователь {request.user} попытался удалить чужое объявление {car_id}")
+            return JsonResponse({'success': False, 'error': 'У вас нет прав для удаления этого объявления'}, status=403)
+        
+        # Удаляем автомобиль (связанные объекты будут удалены автоматически через сигналы)
         car.delete()
-        messages.success(request, 'Объявление успешно удалено!')
-        return redirect('profile')
-    return render(request, 'edit_car.html', {'car': car})
+        
+        logger.info(f"Объявление {car_id} успешно удалено пользователем {request.user}")
+        return JsonResponse({'success': True})
+            
+    except Car.DoesNotExist:
+        logger.error(f"Объявление с id {car_id} не найдено")
+        return JsonResponse({'success': False, 'error': 'Объявление не найдено'}, status=404)
+    except Exception as e:
+        logger.error(f"Ошибка при удалении объявления {car_id}: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Внутренняя ошибка сервера'}, status=500)
 
 def password_reset_request(request):
     if request.method == 'POST':
@@ -601,54 +657,6 @@ def manage_balances(request):
     else:
         form = ManageBalanceForm()
     return render(request, 'manage_balances.html', {'users': users, 'form': form})
-
-@login_required
-def send_chat_request(request, car_id):
-    if not request.user.is_authenticated:
-        messages.error(request, 'Войдите в аккаунт для отправки запроса.')
-        return redirect('login')
-    car = get_object_or_404(Car, id=car_id)
-    if request.user == car.user:
-        messages.error(request, 'Вы не можете отправить запрос на свой автомобиль.')
-        return redirect('car_detail', car_id=car_id)
-    if request.method == 'POST':
-        form = ChatRequestForm(request.POST)
-        if form.is_valid():
-            chat_request = form.save(commit=False)
-            chat_request.car = car
-            chat_request.sender = request.user
-            chat_request.receiver = car.user
-            chat_request.save()
-            messages.success(request, 'Запрос на чат отправлен продавцу!')
-            return redirect('car_detail', car_id=car_id)
-    else:
-        form = ChatRequestForm()
-    return render(request, 'car_detail.html', {'car': car, 'chat_form': form})
-
-@login_required
-def accept_chat_request(request, request_id):
-    chat_request = get_object_or_404(ChatRequest, id=request_id, receiver=request.user, status='pending')
-    if request.method == 'POST':
-        chat_request.status = 'accepted'
-        chat_request.save()
-        Message.objects.create(chat_request=chat_request, sender=request.user, content='Чат начат!')
-        messages.success(request, 'Чат с покупателем открыт!')
-        return redirect('chat', chat_request.id)
-    return redirect('profile')
-
-@login_required
-def chat(request, request_id):
-    chat_request = get_object_or_404(ChatRequest, id=request_id, status='accepted')
-    if request.user not in [chat_request.sender, chat_request.receiver] and not request.user.is_superuser:
-        messages.error(request, 'У вас нет доступа к этому чату.')
-        return redirect('car_list')
-    messages = Message.objects.filter(chat_request=chat_request).order_by('timestamp')
-    if request.method == 'POST':
-        content = request.POST.get('message')
-        if content:
-            Message.objects.create(chat_request=chat_request, sender=request.user, content=content)
-            return redirect('chat', request_id=request_id)
-    return render(request, 'chat.html', {'chat_request': chat_request, 'messages': messages})
 
 @login_required
 def favorite_list(request):

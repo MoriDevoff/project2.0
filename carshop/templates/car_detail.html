@@ -36,21 +36,30 @@
             {% endif %}
         </div>
         <div>
+            <table class="w-full text-sm md:text-base mb-4">
+                <tbody>
+                    <tr><td class="text-gray-500 pr-4">Двигатель</td><td>{{ car.fuel_type }}, {{ car.engine_capacity }} л</td></tr>
+                    {% with spec=car.carspecification %}
+                    <tr><td class="text-gray-500 pr-4">Мощность</td><td>{{ spec.power|default:"-" }} л.с.</td></tr>
+                    {% endwith %}
+                    <tr><td class="text-gray-500 pr-4">Коробка передач</td><td>{{ car.transmission }}</td></tr>
+                    {% with spec=car.carspecification %}
+                    <tr><td class="text-gray-500 pr-4">Привод</td><td>{{ spec.drive_type|default:"-" }}</td></tr>
+                    <tr><td class="text-gray-500 pr-4">Тип кузова</td><td>{{ spec.body_type|default:"-" }}</td></tr>
+                    {% endwith %}
+                    <tr><td class="text-gray-500 pr-4">Цвет</td><td>{{ car.color|default:"-" }}</td></tr>
+                    <tr><td class="text-gray-500 pr-4">Пробег</td><td>{{ car.mileage }} км</td></tr>
+                    {% with spec=car.carspecification %}
+                    <tr><td class="text-gray-500 pr-4">VIN</td><td>{{ spec.vin|default:"-" }}</td></tr>
+                    <tr><td class="text-gray-500 pr-4">Масса</td><td>{{ spec.weight|default:"-" }} кг</td></tr>
+                    <tr><td class="text-gray-500 pr-4">Страна производства</td><td>{{ spec.country_of_origin|default:"-" }}</td></tr>
+                    {% endwith %}
+                </tbody>
+            </table>
             <p class="text-lg md:text-xl text-yellow-600 font-bold">{{ car.price }} ₽</p>
             <p class="text-gray-600 mt-2 text-sm md:text-base">
-                <strong>Пробег:</strong> {{ car.mileage }} км
-            </p>
-            <p class="text-gray-600 mt-2 text-sm md:text-base">
-                <strong>Тип топлива:</strong> {{ car.fuel_type }}
-            </p>
-            <p class="text-gray-600 mt-2 text-sm md:text-base">
-                <strong>Трансмиссия:</strong> {{ car.transmission }}
-            </p>
-            <p class="text-gray-600 mt-2 text-sm md:text-base">
-                <strong>Цвет:</strong> {{ car.color|default:"Не указан" }}
-            </p>
-            <p class="text-gray-600 mt-2 text-sm md:text-base">
-                <strong>Объем двигателя:</strong> {{ car.engine_capacity }} л
+                <strong>Состояние:</strong>
+                {% if car.condition == "new" %}Новый{% else %}Б/у{% endif %}
             </p>
             <p class="text-gray-600 mt-2 text-sm md:text-base">
                 <strong>Описание:</strong> {{ car.description|default:"Описание отсутствует" }}
@@ -66,14 +75,14 @@
 
     <div class="mt-4 flex items-center space-x-4">
         {% if request.user.is_authenticated %}
-        <form method="post" action="{% url 'toggle_favorite' car_id=car.id %}">
+        <form method="post" action="{% url 'toggle_favorite' car_id=car.id %}" class="favorite-form">
             {% csrf_token %}
             {% if request.user in car.favorite_set.all|map:'user' %}
-            <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 flex items-center text-sm md:text-base">
+            <button type="submit" class="favorite-button favorited bg-red-500 text-white px-4 py-2 rounded-lg flex items-center text-sm md:text-base">
                 <i class="fas fa-heart mr-2"></i> Удалить из избранного
             </button>
             {% else %}
-            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center text-sm md:text-base">
+            <button type="submit" class="favorite-button bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center text-sm md:text-base">
                 <i class="fas fa-heart mr-2"></i> Добавить в избранное
             </button>
             {% endif %}
@@ -164,6 +173,7 @@
         <a href="{% url 'edit_car' car.id %}" class="ml-4 inline-block bg-green-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm md:text-base">
             Редактировать <i class="fas fa-edit ml-2"></i>
         </a>
+        <button type="button" id="deleteCarButton" class="ml-4 inline-block bg-red-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm md:text-base">Удалить объявление</button>
         {% elif not car.is_sold and request.user.is_authenticated %}
         <a href="{% url 'purchase_car' car.id %}" class="ml-4 inline-block bg-yellow-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm md:text-base">
             Купить <i class="fas fa-shopping-cart ml-2"></i>
@@ -171,6 +181,21 @@
         {% endif %}
     </div>
 </div>
+
+<style>
+    .favorite-button.favorited {
+        background-color: #ef4444;
+    }
+    .favorite-button.favorited:hover {
+        background-color: #dc2626;
+    }
+    .favorite-button {
+        transition: background-color 0.3s ease;
+    }
+    .favorite-button:hover {
+        background-color: #2563eb;
+    }
+</style>
 
 <script>
     const carouselIndices = {};
@@ -249,5 +274,69 @@
             }
         });
     });
+
+    // Асинхронное переключение избранного
+    document.querySelectorAll('.favorite-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const button = this.querySelector('.favorite-button');
+            const isFavorited = button.classList.contains('favorited');
+
+            fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: new FormData(this)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'added') {
+                    button.classList.add('favorited');
+                    button.innerHTML = '<i class="fas fa-heart mr-2"></i> Удалить из избранного';
+                } else if (data.status === 'removed') {
+                    button.classList.remove('favorited');
+                    button.innerHTML = '<i class="fas fa-heart mr-2"></i> Добавить в избранное';
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+            });
+        });
+    });
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteBtn = document.getElementById('deleteCarButton');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', function() {
+            if (confirm('Вы уверены, что хотите удалить это объявление?')) {
+                fetch("{% url 'delete_car' car_id=car.id %}", {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': "{{ csrf_token }}",
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showSticker('Объявление успешно удалено', 'success');
+                        setTimeout(() => {
+                            window.location.href = "{% url 'car_list' %}";
+                        }, 1000);
+                    } else {
+                        showSticker(data.error || 'Ошибка при удалении объявления', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    showSticker('Ошибка при удалении объявления', 'error');
+                });
+            }
+        });
+    }
+});
 </script>
 {% endblock %}

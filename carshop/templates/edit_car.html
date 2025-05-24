@@ -18,6 +18,7 @@
     <form method="post" enctype="multipart/form-data" class="space-y-4">
         {% csrf_token %}
         {{ form.non_field_errors }}
+        {{ spec_form.non_field_errors }}
 
         <!-- Поля автомобиля -->
         {% for field in form %}
@@ -32,6 +33,19 @@
             {% endif %}
         </div>
         {% endif %}
+        {% endfor %}
+
+        <!-- Поля характеристик (CarSpecification) -->
+        {% for field in spec_form %}
+        <div class="mb-4">
+            <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium mb-1">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+            <div class="text-red-500 text-sm mt-1">
+                {{ field.errors }}
+            </div>
+            {% endif %}
+        </div>
         {% endfor %}
 
         <!-- Существующие фото с чекбоксами для удаления -->
@@ -54,50 +68,87 @@
         {% endif %}
 
         <!-- Поля для новых фото (URL) -->
-        <h2 class="text-xl font-semibold mt-6 mb-2">Добавить новые фото (URL)</h2>
-        {% for i in "123456789"|add:"10"|make_list %}
-        {% with field_name="photo_url_"|add:i %}
-        {% with field=form|lookup:field_name %}
-        <div class="mb-4">
-            <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium mb-1">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-            <div class="text-red-500 text-sm mt-1">
-                {{ field.errors }}
-            </div>
-            {% endif %}
+        <div>
+            <h2 class="text-xl font-semibold mt-6 mb-2">Добавить новые фото (URL)</h2>
+            {% for i in "123456789"|add:"10"|make_list %}
+                {% with field_name="photo_url_"|add:i %}
+                <div class="mb-4">
+                    <label for="{{ form|lookup:field_name|attr:'id_for_label' }}" class="block text-gray-700 font-semibold mb-1">{{ form|lookup:field_name|attr:'label' }}</label>
+                    {{ form|lookup:field_name }}
+                    {% if form|lookup:field_name|attr:'errors' %}
+                        <span class="text-red-500 text-sm">{{ form|lookup:field_name|attr:'errors' }}</span>
+                    {% endif %}
+                </div>
+                {% endwith %}
+            {% endfor %}
         </div>
-        {% endwith %}
-        {% endwith %}
-        {% endfor %}
 
         <!-- Поля для новых фото (файлы) -->
-        <h2 class="text-xl font-semibold mt-6 mb-2">Добавить новые фото (файлы)</h2>
-        {% for i in "123456789"|add:"10"|make_list %}
-        {% with field_name="photo_file_"|add:i %}
-        {% with field=form|lookup:field_name %}
-        <div class="mb-4">
-            <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium mb-1">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-            <div class="text-red-500 text-sm mt-1">
-                {{ field.errors }}
-            </div>
-            {% endif %}
+        <div>
+            <h2 class="text-xl font-semibold mt-6 mb-2">Добавить новые фото (файлы)</h2>
+            {% for i in "123456789"|add:"10"|make_list %}
+                {% with field_name="photo_file_"|add:i %}
+                <div class="mb-4">
+                    <label for="{{ form|lookup:field_name|attr:'id_for_label' }}" class="block text-gray-700 font-semibold mb-1">{{ form|lookup:field_name|attr:'label' }}</label>
+                    {{ form|lookup:field_name }}
+                    {% if form|lookup:field_name|attr:'errors' %}
+                        <span class="text-red-500 text-sm">{{ form|lookup:field_name|attr:'errors' }}</span>
+                    {% endif %}
+                </div>
+                {% endwith %}
+            {% endfor %}
         </div>
-        {% endwith %}
-        {% endwith %}
-        {% endfor %}
 
         <!-- Кнопки -->
         <div class="flex space-x-4 mt-6">
             <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Сохранить</button>
             <a href="{% url 'car_detail' car_id=car.id %}" class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400">Отмена</a>
-            <form method="post" action="{% url 'delete_car' car_id=car.id %}" class="inline">
-                {% csrf_token %}
-                <button type="submit" onclick="return confirm('Вы уверены, что хотите удалить это объявление?');" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Удалить объявление</button>
-            </form>
+            <button type="button" id="deleteCarButton" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Удалить объявление</button>
         </div>
     </form>
 </div>
+
+<script>
+    function showSticker(message, type) {
+        const sticker = document.createElement('div');
+        sticker.className = `fixed top-4 left-1/2 transform -translate-x-1/2 p-4 rounded-lg shadow-lg text-white text-center z-50 ${
+            type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        }`;
+        sticker.textContent = message;
+        document.body.appendChild(sticker);
+
+        setTimeout(() => {
+            sticker.style.opacity = '0';
+            sticker.style.transition = 'opacity 0.5s ease';
+            setTimeout(() => sticker.remove(), 500);
+        }, 3000);
+    }
+
+    document.getElementById('deleteCarButton').addEventListener('click', function() {
+        if (confirm('Вы уверены, что хотите удалить это объявление?')) {
+            fetch("{% url 'delete_car' car_id=car.id %}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': "{{ csrf_token }}",
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showSticker('Объявление успешно удалено', 'success');
+                    setTimeout(() => {
+                        window.location.href = "{% url 'car_list' %}";
+                    }, 1000);
+                } else {
+                    showSticker(data.error || 'Ошибка при удалении объявления', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                showSticker('Ошибка при удалении объявления', 'error');
+            });
+        }
+    });
+</script>
 {% endblock %}

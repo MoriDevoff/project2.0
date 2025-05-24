@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth import get_user_model, password_validation
 from django.core.exceptions import ValidationError
-from .models import Car, User, PurchaseRequest, CarPhoto, ChatRequest, Message
+from .models import Car, User, PurchaseRequest, CarPhoto, CarSpecification
 
 User = get_user_model()
 
@@ -213,20 +213,6 @@ class SetPasswordForm(forms.Form):
             raise forms.ValidationError('Пароли не совпадают.')
         return cleaned_data
 
-class ChatRequestForm(forms.ModelForm):
-    class Meta:
-        model = ChatRequest
-        fields = ['message']
-        labels = {'message': 'Сообщение продавцу'}
-        widgets = {'message': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Напишите сообщение продавцу'})}
-
-class MessageForm(forms.ModelForm):
-    class Meta:
-        model = Message
-        fields = ['content']
-        labels = {'content': 'Сообщение'}
-        widgets = {'content': forms.Textarea(attrs={'rows': 2, 'placeholder': 'Введите сообщение'})}
-
 class ManageBalanceForm(forms.Form):
     user = forms.CharField(
         label='Пользователь',
@@ -258,3 +244,22 @@ class ManageUserForm(forms.Form):
         except User.DoesNotExist:
             raise ValidationError('Пользователь с таким именем не найден.')
         return user
+
+class CarSpecificationForm(forms.ModelForm):
+    class Meta:
+        model = CarSpecification
+        fields = [
+            'body_type', 'power', 'drive_type', 'vin', 'weight', 'country_of_origin'
+        ]
+        labels = {
+            'body_type': 'Тип кузова',
+            'power': 'Мощность (л.с.)',
+            'drive_type': 'Тип привода',
+            'vin': 'VIN',
+            'weight': 'Масса (кг)',
+            'country_of_origin': 'Страна производства',
+        }
+        widgets = {
+            'body_type': forms.Select(choices=CarSpecification.BODY_TYPE_CHOICES),
+            'drive_type': forms.Select(choices=CarSpecification.DRIVE_TYPE_CHOICES),
+        }
