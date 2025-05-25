@@ -1,50 +1,62 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in">
-    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 text-center">Управление балансами</h2>
+<div class="max-w-4xl mx-auto rounded-xl shadow-xl p-6 md:p-8 fade-in" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+    <h2 class="text-2xl md:text-3xl font-extrabold mb-6 text-center" style="color: var(--text-color);">Управление балансами</h2>
     <form method="post" class="mb-6">
         {% csrf_token %}
         <div class="mb-4">
-            <label for="user-autocomplete" class="block text-gray-700">Пользователь</label>
-            <input type="text" name="user" id="user-autocomplete" class="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" autocomplete="off" value="{{ form.user.value|default_if_none:'' }}">
-            <ul id="user-suggestions" class="bg-white border rounded-lg mt-1 max-h-40 overflow-y-auto hidden"></ul>
+            <label for="user-autocomplete" class="block" style="color: var(--secondary-color);">Пользователь</label>
+            <input type="text" name="user" id="user-autocomplete" class="w-full p-2 border rounded-lg focus:outline-none focus:ring-2" style="border-color: var(--border-color); focus:ring: var(--btn-bg);" autocomplete="off" value="{{ form.user.value|default_if_none:'' }}">
+            <ul id="user-suggestions" class="border rounded-lg mt-1 max-h-40 overflow-y-auto hidden" style="background-color: var(--card-bg); border-color: var(--border-color);"></ul>
             {% if form.user.errors %}
-            <p class="text-red-600 text-sm">{{ form.user.errors }}</p>
+            <p class="text-sm" style="color: var(--error-color);">{{ form.user.errors }}</p>
             {% endif %}
         </div>
         <div class="mb-4">
-            <label for="id_amount" class="block text-gray-700">Сумма</label>
+            <label for="id_amount" class="block" style="color: var(--secondary-color);">Сумма</label>
             {{ form.amount }}
             {% if form.amount.errors %}
-            <p class="text-red-600 text-sm">{{ form.amount.errors }}</p>
+            <p class="text-sm" style="color: var(--error-color);">{{ form.amount.errors }}</p>
             {% endif %}
         </div>
         <div class="mb-4">
-            <label for="id_action" class="block text-gray-700">Действие</label>
+            <label for="id_action" class="block" style="color: var(--secondary-color);">Действие</label>
             {{ form.action }}
         </div>
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Изменить баланс</button>
+        <button type="submit" class="px-4 py-2 rounded-lg" style="background-color: var(--btn-bg); color: var(--btn-text);">Изменить баланс</button>
     </form>
     <table class="w-full text-left border-collapse">
         <thead>
-        <tr class="bg-gray-200">
-            <th class="p-2 border">Имя пользователя</th>
-            <th class="p-2 border">Email</th>
-            <th class="p-2 border">Баланс</th>
+        <tr style="background-color: var(--secondary-btn-bg);">
+            <th class="p-2 border" style="border-color: var(--border-color);">Имя пользователя</th>
+            <th class="p-2 border" style="border-color: var(--border-color);">Email</th>
+            <th class="p-2 border" style="border-color: var(--border-color);">Баланс</th>
         </tr>
         </thead>
         <tbody>
         {% for user in users %}
-        <tr class="hover:bg-gray-100">
-            <td class="p-2 border">{{ user.username }}</td>
-            <td class="p-2 border">{{ user.email }}</td>
-            <td class="p-2 border">{{ user.balance }} ₽</td>
+        <tr class="hover-row">
+            <td class="p-2 border" style="border-color: var(--border-color);">{{ user.username }}</td>
+            <td class="p-2 border" style="border-color: var(--border-color);">{{ user.email }}</td>
+            <td class="p-2 border" style="border-color: var(--border-color);">{{ user.balance }} ₽</td>
         </tr>
         {% endfor %}
         </tbody>
     </table>
 </div>
+
+<style>
+    button[type="submit"]:hover {
+        background-color: var(--btn-hover);
+    }
+    .hover-row:hover {
+        background-color: var(--hover-bg);
+    }
+    #user-suggestions li:hover {
+        background-color: var(--hover-bg);
+    }
+</style>
 
 <script>
     const userInput = document.getElementById('user-autocomplete');
@@ -68,7 +80,7 @@
             suggestionsList.classList.remove('hidden');
             filteredUsers.forEach(user => {
                 const li = document.createElement('li');
-                li.className = 'p-2 hover:bg-gray-100 cursor-pointer';
+                li.className = 'p-2 cursor-pointer';
                 li.textContent = user;
                 li.addEventListener('click', () => {
                     userInput.value = user;

@@ -1,77 +1,77 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg">
-    <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Сделки</h2>
+<div class="max-w-4xl mx-auto mt-10 p-6 card rounded-lg shadow-lg" style="background-color: var(--card-bg); color: var(--card-text);">
+    <h2 class="text-2xl font-bold text-center mb-6" style="color: var(--text-color);">Сделки</h2>
 
     <!-- Вкладки -->
     <div class="tabs">
-        <ul class="flex border-b">
+        <ul class="flex border-b" style="border-color: var(--border-color);">
             <li class="mr-1">
-                <a class="inline-block py-2 px-4 text-blue-600 font-semibold border-b-2 border-blue-600" href="#buying">Мои покупки</a>
+                <a class="inline-block py-2 px-4 font-semibold border-b-2" href="#buying" style="color: var(--primary-color); border-color: var(--primary-color);">Мои покупки</a>
             </li>
             <li class="mr-1">
-                <a class="inline-block py-2 px-4 text-gray-600 hover:text-blue-600" href="#selling">Мои продажи</a>
+                <a class="inline-block py-2 px-4" href="#selling" style="color: var(--secondary-color); hover:color: var(--primary-color);">Мои продажи</a>
             </li>
         </ul>
     </div>
 
     <!-- Мои покупки -->
     <div id="buying" class="tab-content mt-4">
-        <h3 class="text-xl font-semibold text-gray-800 mb-4">Мои покупки</h3>
+        <h3 class="text-xl font-semibold mb-4" style="color: var(--text-color);">Мои покупки</h3>
         {% if buyer_requests %}
         <div class="grid gap-4">
             {% for request in buyer_requests %}
-            <div class="p-4 bg-gray-50 rounded-lg shadow">
+            <div class="p-4 card rounded-lg shadow" style="background-color: var(--card-bg); color: var(--card-text); border-color: var(--border-color);">
                 <p><strong>{{ request.car.brand }} {{ request.car.model }} ({{ request.car.year }})</strong></p>
-                <p>Цена продавца: {{ request.car.price }} ₽</p>
-                <p>Ваше предложение: {% if request.offered_price %}{{ request.offered_price }} ₽{% else %}По цене продавца{% endif %}</p>
+                <p style="color: var(--secondary-color);">Цена продавца: {{ request.car.price }} ₽</p>
+                <p style="color: var(--secondary-color);">Ваше предложение: {% if request.offered_price %}{{ request.offered_price }} ₽{% else %}По цене продавца{% endif %}</p>
                 {% if request.final_price %}
-                <p>Итоговая цена: {{ request.final_price }} ₽</p>
+                <p style="color: var(--secondary-color);">Итоговая цена: {{ request.final_price }} ₽</p>
                 {% endif %}
-                <p>Статус: {{ request.status }}</p>
-                <p>Дата заявки: {{ request.request_date|date:"d.m.Y H:i" }}</p>
-                <a href="{% url 'car_detail' request.car.id %}" class="text-blue-600 hover:underline">Подробнее об автомобиле</a>
+                <p style="color: var(--secondary-color);">Статус: {{ request.status }}</p>
+                <p style="color: var(--secondary-color);">Дата заявки: {{ request.request_date|date:"d.m.Y H:i" }}</p>
+                <a href="{% url 'car_detail' request.car.id %}" class="inline-block px-3 py-1 rounded text-sm" style="background-color: var(--btn-bg); color: var(--btn-text); border: 1px solid var(--btn-border);">Подробнее об автомобиле</a>
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-gray-600">У вас нет заявок на покупку.</p>
+        <p style="color: var(--secondary-color);">У вас нет заявок на покупку.</p>
         {% endif %}
     </div>
 
     <!-- Мои продажи -->
     <div id="selling" class="tab-content mt-4 hidden">
-        <h3 class="text-xl font-semibold text-gray-800 mb-4">Мои продажи</h3>
+        <h3 class="text-xl font-semibold mb-4" style="color: var(--text-color);">Мои продажи</h3>
         {% if seller_requests %}
         <div class="grid gap-4">
             {% for request in seller_requests %}
-            <div class="p-4 bg-gray-50 rounded-lg shadow">
+            <div class="p-4 card rounded-lg shadow" style="background-color: var(--card-bg); color: var(--card-text); border-color: var(--border-color);">
                 <p><strong>{{ request.car.brand }} {{ request.car.model }} ({{ request.car.year }})</strong></p>
-                <p>Цена: {{ request.car.price }} ₽</p>
-                <p>Предложение покупателя: {% if request.offered_price %}{{ request.offered_price }} ₽{% else %}По вашей цене{% endif %}</p>
+                <p style="color: var(--secondary-color);">Цена: {{ request.car.price }} ₽</p>
+                <p style="color: var(--secondary-color);">Предложение покупателя: {% if request.offered_price %}{{ request.offered_price }} ₽{% else %}По вашей цене{% endif %}</p>
                 {% if request.final_price %}
-                <p>Итоговая цена: {{ request.final_price }} ₽</p>
+                <p style="color: var(--secondary-color);">Итоговая цена: {{ request.final_price }} ₽</p>
                 {% endif %}
-                <p>Покупатель: {{ request.buyer.username }}</p>
-                <p>Сообщение: {{ request.message|default:"Нет сообщения" }}</p>
-                <p>Статус: {{ request.status }}</p>
-                <p>Дата заявки: {{ request.request_date|date:"d.m.Y H:i" }}</p>
+                <p style="color: var(--secondary-color);">Покупатель: {{ request.buyer.username }}</p>
+                <p style="color: var(--secondary-color);">Сообщение: {{ request.message|default:"Нет сообщения" }}</p>
+                <p style="color: var(--secondary-color);">Статус: {{ request.status }}</p>
+                <p style="color: var(--secondary-color);">Дата заявки: {{ request.request_date|date:"d.m.Y H:i" }}</p>
                 {% if request.status == 'В ожидании' %}
-                <a href="{% url 'respond_purchase' request.id 'accept' %}" class="inline-block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors">Одобрить</a>
-                <a href="{% url 'respond_purchase' request.id 'reject' %}" class="ml-2 inline-block bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors">Отклонить</a>
+                <a href="{% url 'respond_purchase' request.id 'accept' %}" class="inline-block px-4 py-2 rounded text-sm mr-2" style="background-color: var(--color-green); color: var(--btn-text); border: 1px solid var(--btn-border);">Одобрить</a>
+                <a href="{% url 'respond_purchase' request.id 'reject' %}" class="inline-block px-4 py-2 rounded text-sm" style="background-color: var(--color-red, #dc2626); color: var(--btn-text); border: 1px solid var(--btn-border);">Отклонить</a>
                 {% endif %}
-                <a href="{% url 'car_detail' request.car.id %}" class="ml-2 text-blue-600 hover:underline">Подробнее об автомобиле</a>
+                <a href="{% url 'car_detail' request.car.id %}" class="inline-block px-3 py-1 rounded text-sm mt-2" style="background-color: var(--btn-bg); color: var(--btn-text); border: 1px solid var(--btn-border);">Подробнее об автомобиле</a>
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-gray-600">У вас нет заявок на продажу.</p>
+        <p style="color: var(--secondary-color);">У вас нет заявок на продажу.</p>
         {% endif %}
     </div>
 
     <div class="mt-6 text-center">
-        <a href="{% url 'profile' %}" class="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">Вернуться в профиль</a>
+        <a href="{% url 'profile' %}" class="inline-block px-4 py-2 rounded text-sm" style="background-color: var(--btn-bg); color: var(--btn-text); border: 1px solid var(--btn-border);">Вернуться в профиль</a>
     </div>
 </div>
 
@@ -83,8 +83,14 @@
         tabs.forEach(tab => {
             tab.addEventListener('click', function(e) {
                 e.preventDefault();
-                tabs.forEach(t => t.classList.remove('text-blue-600', 'font-semibold', 'border-b-2', 'border-blue-600'));
-                tab.classList.add('text-blue-600', 'font-semibold', 'border-b-2', 'border-blue-600');
+                tabs.forEach(t => {
+                    t.classList.remove('font-semibold', 'border-b-2');
+                    t.style.color = 'var(--secondary-color)';
+                    t.style.borderColor = 'transparent';
+                });
+                tab.classList.add('font-semibold', 'border-b-2');
+                tab.style.color = 'var(--primary-color)';
+                tab.style.borderColor = 'var(--primary-color)';
 
                 tabContents.forEach(content => content.classList.add('hidden'));
                 const target = document.querySelector(tab.getAttribute('href'));

@@ -25,7 +25,6 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -103,6 +102,7 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 1209600
 SESSION_COOKIE_SECURE = False
 SESSION_COOKIE_HTTPONLY = True
+
 # Email settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -114,3 +114,8 @@ DEFAULT_FROM_EMAIL = 'yvfg2054@gmail.com'
 
 # Срок действия токена подтверждения
 ACCOUNT_ACTIVATION_DAYS = 1
+
+# Настройки аутентификации
+LOGIN_URL = '/login/'  # Изменено с '/accounts/login/' на '/login/'
+LOGIN_REDIRECT_URL = '/'  # Перенаправление после входа на главную страницу
+LOGOUT_REDIRECT_URL = '/'  # Перенаправление после выхода на главную страницу

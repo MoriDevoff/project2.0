@@ -1,55 +1,59 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="w-full min-h-[90vh] flex justify-center items-center bg-gray-100">
-    <div class="w-full max-w-3xl bg-white rounded-2xl shadow-2xl p-8 md:p-12 mx-auto">
-        <h2 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-8 text-center">Добавить автомобиль</h2>
+<div class="w-full min-h-[90vh] flex justify-center items-center" style="background-color: var(--background-color);">
+    <div class="w-full max-w-3xl rounded-2xl shadow-xl p-4 sm:p-6 md:p-8 mx-auto" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+        <h2 class="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-6 text-center" style="color: var(--text-color);">Добавить автомобиль</h2>
         {% if messages %}
         {% for message in messages %}
-        <div class="mb-4 p-3 rounded {% if message.tags == 'success' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %} text-center text-base">
+        <div class="mb-4 p-3 rounded text-center text-sm sm:text-base" style="{% if message.tags == 'success' %}background-color: var(--success-bg); color: var(--success-color);{% else %}background-color: var(--error-bg); color: var(--error-color);{% endif %}">
             {{ message }}
         </div>
         {% endfor %}
         {% endif %}
-        <form method="post" enctype="multipart/form-data" class="space-y-8">
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
             {% csrf_token %}
             {{ form.non_field_errors }}
             {{ spec_form.non_field_errors }}
 
-            <!-- Все поля автомобиля (включая фото) -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {% for field in form.visible_fields %}
                 <div>
-                    {{ field.label_tag }}
+                    <label for="{{ field.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ field.label }}</label>
                     {{ field }}
                     {% if field.errors %}
-                    <div class="text-red-500 text-sm mt-1">{{ field.errors }}</div>
+                    <div class="text-xs sm:text-sm mt-1" style="color: var(--error-color);">{{ field.errors }}</div>
                     {% endif %}
                 </div>
                 {% endfor %}
             </div>
 
-            <!-- Характеристики -->
-            <div class="mt-8">
-                <h3 class="text-xl font-semibold mb-4">Характеристики</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="mt-6 sm:mt-8">
+                <h3 class="text-lg sm:text-xl font-semibold mb-4" style="color: var(--secondary-color);">Характеристики</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     {% for field in spec_form.visible_fields %}
                     <div>
-                        {{ field.label_tag }}
+                        <label for="{{ field.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ field.label }}</label>
                         {{ field }}
                         {% if field.errors %}
-                        <div class="text-red-500 text-sm mt-1">{{ field.errors }}</div>
+                        <div class="text-xs sm:text-sm mt-1" style="color: var(--error-color);">{{ field.errors }}</div>
                         {% endif %}
                     </div>
                     {% endfor %}
                 </div>
             </div>
 
-            <div class="flex space-x-4 mt-10 justify-center">
-                <button type="submit" class="bg-blue-600 text-white text-lg px-8 py-3 rounded-lg hover:bg-blue-700 font-semibold shadow">Опубликовать</button>
-                <a href="{% url 'car_list' %}" class="bg-gray-300 text-gray-700 text-lg px-8 py-3 rounded-lg hover:bg-gray-400 font-semibold shadow">Отмена</a>
+            <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mt-6 sm:mt-8 justify-center">
+                <button type="submit" class="text-base sm:text-lg px-6 py-2 rounded-lg font-semibold shadow w-full sm:w-auto" style="background-color: var(--btn-bg); color: var(--btn-text);">Опубликовать</button>
+                <a href="{% url 'car_list' %}" class="text-base sm:text-lg px-6 py-2 rounded-lg font-semibold shadow w-full sm:w-auto text-center border" style="background-color: var(--secondary-btn-bg); color: var(--secondary-btn-text); border-color: var(--secondary-btn-text); border-width: 1px;">Отмена</a>
             </div>
         </form>
     </div>
 </div>
+
+<style>
+    button[type="submit"]:hover, a[href="{% url 'car_list' %}"]:hover {
+        background-color: var(--btn-hover);
+    }
+</style>
 {% endblock %}

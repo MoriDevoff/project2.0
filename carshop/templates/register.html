@@ -2,12 +2,12 @@
 {% load static %}
 
 {% block content %}
-<div class="max-w-md mx-auto bg-white rounded-xl shadow-2xl p-6 md:p-8 fade-in">
-    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 text-center">Регистрация</h2>
+<div class="max-w-md mx-auto rounded-xl shadow-xl p-6 md:p-8 fade-in" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+    <h2 class="text-2xl md:text-3xl font-extrabold mb-6 text-center" style="color: var(--text-color);">Регистрация</h2>
     {% if messages %}
     {% for message in messages %}
     {% if message.tags == 'success' %}
-    <div class="mb-4 p-3 rounded bg-green-100 text-green-800 text-center text-sm md:text-base">
+    <div class="mb-4 p-3 rounded text-center text-sm md:text-base" style="background-color: var(--success-bg); color: var(--success-color);">
         {{ message }}
     </div>
     {% endif %}
@@ -16,61 +16,62 @@
     <form method="post" id="registrationForm" class="space-y-6">
         {% csrf_token %}
         <div>
-            <label class="block text-gray-700 font-medium text-sm md:text-base">{{ form.username.label }}</label>
+            <label class="block font-medium text-sm md:text-base" style="color: var(--secondary-color);">{{ form.username.label }}</label>
             {{ form.username }}
             {% if form.username.errors %}
-            <p class="text-red-600 text-sm mt-1">{{ form.username.errors.as_text }}</p>
+            <p class="text-sm mt-1" style="color: var(--error-color);">{{ form.username.errors.as_text }}</p>
             {% endif %}
         </div>
         <div>
-            <label class="block text-gray-700 font-medium text-sm md:text-base">{{ form.email.label }}</label>
+            <label class="block font-medium text-sm md:text-base" style="color: var(--secondary-color);">{{ form.email.label }}</label>
             {{ form.email }}
-            <span id="email-error" class="text-red-500 text-sm"></span>
+            <span id="email-error" class="text-sm" style="color: var(--error-color);"></span>
             {% if form.email.errors %}
-            <p class="text-red-600 text-sm mt-1">{{ form.email.errors.as_text }}</p>
+            <p class="text-sm mt-1" style="color: var(--error-color);">{{ form.email.errors.as_text }}</p>
             {% endif %}
         </div>
         <div>
-            <label class="block text-gray-700 font-medium text-sm md:text-base">{{ form.phone.label }}</label>
+            <label class="block font-medium text-sm md:text-base" style="color: var(--secondary-color);">{{ form.phone.label }}</label>
             {{ form.phone }}
             {% if form.phone.errors %}
-            <p class="text-red-600 text-sm mt-1">{{ form.phone.errors.as_text }}</p>
+            <p class="text-sm mt-1" style="color: var(--error-color);">{{ form.phone.errors.as_text }}</p>
             {% endif %}
         </div>
         <div class="relative">
-            <label class="block text-gray-700 font-medium text-sm md:text-base">{{ form.password.label }}</label>
+            <label class="block font-medium text-sm md:text-base" style="color: var(--secondary-color);">{{ form.password.label }}</label>
             {{ form.password }}
             {% if form.password.errors %}
-            <p class="text-red-600 text-sm mt-1">{{ form.password.errors.as_text }}</p>
+            <p class="text-sm mt-1" style="color: var(--error-color);">{{ form.password.errors.as_text }}</p>
             {% endif %}
         </div>
         <div class="relative">
-            <label class="block text-gray-700 font-medium text-sm md:text-base">{{ form.confirm_password.label }}</label>
+            <label class="block font-medium text-sm md:text-base" style="color: var(--secondary-color);">{{ form.confirm_password.label }}</label>
             {{ form.confirm_password }}
-            <span id="confirm-password-error" class="text-red-500 text-sm"></span>
+            <span id="confirm-password-error" class="text-sm" style="color: var(--error-color);"></span>
             {% if form.confirm_password.errors %}
-            <p class="text-red-600 text-sm mt-1">{{ form.confirm_password.errors.as_text }}</p>
+            <p class="text-sm mt-1" style="color: var(--error-color);">{{ form.confirm_password.errors.as_text }}</p>
             {% endif %}
         </div>
         {% if form.non_field_errors %}
-        <div class="text-red-600 text-sm mt-1">
+        <div class="text-sm mt-1" style="color: var(--error-color);">
             {{ form.non_field_errors.as_text }}
         </div>
         {% endif %}
-        <div id="errorContainer" class="text-red-600 text-sm mt-1"></div>
-        <button type="button" id="togglePasswordButton" class="w-full flex items-center justify-center bg-gray-300 text-gray-700 p-2 rounded-lg hover:bg-gray-400 transition-all text-sm md:text-base">
+        <div id="errorContainer" class="text-sm mt-1" style="color: var(--error-color);"></div>
+        <a type="button" id="togglePasswordButton"
+           class="w-full flex items-center justify-center p-2 rounded-lg text-sm md:text-base border border-black cursor-pointer hover:bg-gray-200 transition-colors"
+           style="background-color: #c4c6c3; color: #111827;">
             <i id="eyeIcon" class="fas fa-eye text-lg mr-2"></i>
             <span id="toggleText">Показать пароль</span>
-        </button>
-        <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-all text-base md:text-lg shadow-md hover:shadow-lg">
+        </a>
+        <button type="submit" class="w-full p-3 rounded-lg text-base md:text-lg shadow-md hover:shadow-lg" style="background-color: var(--btn-bg); color: var(--btn-text);">
             Зарегистрироваться <i class="fas fa-user-plus ml-2 text-lg"></i>
         </button>
-        <div id="loading" class="hidden text-center"><i class="fas fa-spinner fa-spin"></i> Загрузка...</div>
+        <div id="loading" class="hidden text-center text-sm md:text-base"><i class="fas fa-spinner fa-spin"></i> Загрузка...</div>
     </form>
 </div>
 
 <style>
-    /* Отключаем встроенную иконку браузера для показа пароля */
     input[type="password"]::-ms-reveal,
     input[type="password"]::-ms-clear,
     input[type="password"]::-webkit-textfield-decoration-container {
@@ -80,15 +81,18 @@
         -webkit-appearance: none;
         appearance: none;
     }
-    /* Ускоряем анимацию загрузки */
     #loading {
         transition: opacity 0.2s ease-in-out;
+        color: var(--text-color);
     }
     #loading.hidden {
         opacity: 0;
     }
     #loading:not(.hidden) {
         opacity: 1;
+    }
+    button[type="submit"]:hover, #togglePasswordButton:hover {
+        background-color: var(--btn-hover);
     }
 </style>
 
@@ -106,7 +110,6 @@
         const confirmPasswordInput = document.getElementById('id_confirm_password');
         const confirmPasswordError = document.getElementById('confirm-password-error');
 
-        // Показать/скрыть пароль
         togglePasswordButton.addEventListener('click', function() {
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
@@ -121,7 +124,6 @@
             }
         });
 
-        // Проверка совпадения паролей
         confirmPasswordInput.addEventListener('input', function () {
             const password = passwordInput.value;
             const confirmPassword = this.value;
@@ -141,7 +143,6 @@
             }
         });
 
-        // Проверка уникальности email
         emailInput.addEventListener('input', function () {
             const email = this.value.trim();
             if (email) {
@@ -155,66 +156,37 @@
                 })
                 .then(response => response.json())
                 .then(data => {
-                    if (data.is_available) {
-                        errorSpan.textContent = '';
-                    } else {
+                    if (data.exists) {
                         errorSpan.textContent = 'Этот email уже зарегистрирован.';
+                    } else {
+                        errorSpan.textContent = '';
                     }
                 })
-                .catch(error => console.error('Ошибка:', error));
+                .catch(error => {
+                    console.error('Ошибка проверки email:', error);
+                    errorSpan.textContent = 'Ошибка проверки email.';
+                });
             } else {
                 errorSpan.textContent = '';
             }
         });
 
-        // Асинхронная отправка формы
         form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            const confirmPassword = confirmPasswordInput.value;
-            const password = passwordInput.value;
-            if (password !== confirmPassword) {
+            if (passwordInput.value !== confirmPasswordInput.value) {
+                e.preventDefault();
                 confirmPasswordError.textContent = 'Пароли не совпадают';
                 return;
             }
+            if (!emailInput.value.trim()) {
+                e.preventDefault();
+                errorSpan.textContent = 'Email обязателен для заполнения.';
+                return;
+            }
             loading.classList.remove('hidden');
-            errorContainer.innerHTML = ''; // Очищаем предыдущие ошибки
-            const formData = new FormData(this);
-            fetch(window.location.href, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
+            setTimeout(() => {
                 loading.classList.add('hidden');
-                if (data.success) {
-                    window.location.href = '{% url "login" %}'; // Убрали alert
-                } else {
-                    if (data.error) {
-                        if (typeof data.error === 'string') {
-                            errorContainer.innerHTML = data.error;
-                        } else {
-                            const errors = JSON.parse(data.error);
-                            for (const field in errors) {
-                                const fieldErrors = errors[field];
-                                fieldErrors.forEach(error => {
-                                    errorContainer.innerHTML += `<p>${field}: ${error.message}</p>`;
-                                });
-                            }
-                        }
-                    } else {
-                        errorContainer.innerHTML = 'Проверьте введенные данные';
-                    }
-                }
-            })
-            .catch(error => {
-                loading.classList.add('hidden');
-                errorContainer.innerHTML = 'Ошибка сервера. Попробуйте снова.';
-                console.error('Ошибка:', error);
-            });
+                form.submit();
+            }, 1000); // Симуляция задержки
         });
     });
 </script>

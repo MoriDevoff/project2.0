@@ -20,16 +20,20 @@ from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
+def get_unread_deals_count(user):
+    """Вспомогательная функция для подсчёта непрочитанных уведомлений."""
+    if not user.is_authenticated:
+        return 0
+    buyer_requests = PurchaseRequest.objects.filter(buyer=user).order_by('-request_date')
+    seller_requests = PurchaseRequest.objects.filter(seller=user).order_by('-request_date')
+    unread_purchases_count = buyer_requests.filter(is_read=False, status__in=['Одобрено', 'Отклонено']).count()
+    unread_sales_count = seller_requests.filter(is_read=False, status='В ожидании').count()
+    return unread_purchases_count + unread_sales_count
+
 @login_required
 def car_list(request):
     cars = Car.objects.filter(is_sold=False).annotate(favorite_count=Count('favorites'))
-    unread_deals_count = 0
-    if request.user.is_authenticated:
-        buyer_requests = PurchaseRequest.objects.filter(buyer=request.user).order_by('-request_date')
-        seller_requests = PurchaseRequest.objects.filter(seller=request.user).order_by('-request_date')
-        unread_purchases_count = buyer_requests.filter(is_read=False, status__in=['Одобрено', 'Отклонено']).count()
-        unread_sales_count = seller_requests.filter(is_read=False, status='В ожидании').count()
-        unread_deals_count = unread_purchases_count + unread_sales_count
+    unread_deals_count = get_unread_deals_count(request.user)
 
     # Добавляем поле is_favorited для каждого автомобиля
     for car in cars:
@@ -106,13 +110,7 @@ def car_search(request):
         except (ValueError, TypeError):
             pass
 
-    unread_deals_count = 0
-    if request.user.is_authenticated:
-        buyer_requests = PurchaseRequest.objects.filter(buyer=request.user).order_by('-request_date')
-        seller_requests = PurchaseRequest.objects.filter(seller=request.user).order_by('-request_date')
-        unread_purchases_count = buyer_requests.filter(is_read=False, status__in=['Одобрено', 'Отклонено']).count()
-        unread_sales_count = seller_requests.filter(is_read=False, status='В ожидании').count()
-        unread_deals_count = unread_purchases_count + unread_sales_count
+    unread_deals_count = get_unread_deals_count(request.user)
 
     # Добавляем поле is_favorited для каждого автомобиля
     for car in cars:
@@ -156,10 +154,13 @@ def car_detail(request, car_id):
         }]
     price_data_json = json.dumps(price_data)
 
+    unread_deals_count = get_unread_deals_count(request.user)
+
     return render(request, 'car_detail.html', {
         'car': car,
         'author': car.user,
         'price_data_json': price_data_json,
+        'unread_deals_count': unread_deals_count
     })
 
 def register(request):
@@ -297,12 +298,16 @@ def create_car(request):
         name for name in form.fields
         if name not in photo_url_fields + photo_file_fields + delete_photo_fields + ['photo_files_list', 'photo_urls_list']
     ]
+
+    unread_deals_count = get_unread_deals_count(request.user)
+
     return render(request, 'create_car.html', {
         'form': form,
         'spec_form': spec_form,
         'main_fields': main_fields,
         'photo_url_fields': photo_url_fields,
         'photo_file_fields': photo_file_fields,
+        'unread_deals_count': unread_deals_count
     })
 
 @login_required
@@ -384,7 +389,14 @@ def purchase_car(request, car_id):
         return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
     else:
         form = PurchaseForm(initial={'offered_price': car.price})
-    return render(request, 'purchase_car.html', {'form': form, 'car': car})
+
+    unread_deals_count = get_unread_deals_count(request.user)
+
+    return render(request, 'purchase_car.html', {
+        'form': form,
+        'car': car,
+        'unread_deals_count': unread_deals_count
+    })
 
 @login_required
 def respond_purchase(request, purchase_id, action):
@@ -430,7 +442,13 @@ def edit_profile(request):
             return redirect('profile')
     else:
         form = UserProfileForm(instance=request.user)
-    return render(request, 'edit_profile.html', {'form': form})
+
+    unread_deals_count = get_unread_deals_count(request.user)
+
+    return render(request, 'edit_profile.html', {
+        'form': form,
+        'unread_deals_count': unread_deals_count
+    })
 
 @login_required
 def edit_car(request, car_id):
@@ -497,12 +515,15 @@ def edit_car(request, car_id):
         form = CarForm(instance=car, initial=initial_data)
         spec_form = CarSpecificationForm(instance=spec)
 
+    unread_deals_count = get_unread_deals_count(request.user)
+
     return render(request, 'edit_car.html', {
         'form': form,
         'spec_form': spec_form,
         'car': car,
         'photo_url_fields': photo_url_fields,
         'photo_file_fields': photo_file_fields,
+        'unread_deals_count': unread_deals_count
     })
 
 @csrf_exempt
@@ -635,7 +656,14 @@ def manage_users(request):
             return redirect('manage_users')
     else:
         form = ManageUserForm()
-    return render(request, 'manage_users.html', {'users': users, 'form': form})
+
+    unread_deals_count = get_unread_deals_count(request.user)
+
+    return render(request, 'manage_users.html', {
+        'users': users,
+        'form': form,
+        'unread_deals_count': unread_deals_count
+    })
 
 @login_required
 def manage_ads(request):
@@ -660,7 +688,11 @@ def manage_ads(request):
             elif action == 'delete':
                 car.delete()
                 messages.success(request, f'Объявление {car.brand} {car.model} удалено')
-    return render(request, 'manage_ads.html', {'cars': cars})
+    unread_deals_count = get_unread_deals_count(request.user)
+    return render(request, 'manage_ads.html', {
+        'cars': cars,
+        'unread_deals_count': unread_deals_count
+    })
 
 @login_required
 def manage_balances(request):
@@ -691,18 +723,19 @@ def manage_balances(request):
             return redirect('manage_balances')
     else:
         form = ManageBalanceForm()
-    return render(request, 'manage_balances.html', {'users': users, 'form': form})
+
+    unread_deals_count = get_unread_deals_count(request.user)
+
+    return render(request, 'manage_balances.html', {
+        'users': users,
+        'form': form,
+        'unread_deals_count': unread_deals_count
+    })
 
 @login_required
 def favorite_list(request):
     favorites = Favorite.objects.filter(user=request.user).order_by('-added_date')
-    unread_deals_count = 0
-    if request.user.is_authenticated:
-        buyer_requests = PurchaseRequest.objects.filter(buyer=request.user).order_by('-request_date')
-        seller_requests = PurchaseRequest.objects.filter(seller=request.user).order_by('-request_date')
-        unread_purchases_count = buyer_requests.filter(is_read=False, status__in=['Одобрено', 'Отклонено']).count()
-        unread_sales_count = seller_requests.filter(is_read=False, status='В ожидании').count()
-        unread_deals_count = unread_purchases_count + unread_sales_count
+    unread_deals_count = get_unread_deals_count(request.user)
 
     return render(request, 'favorite_list.html', {
         'favorites': favorites,

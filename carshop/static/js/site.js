@@ -17,52 +17,7 @@ document.addEventListener('DOMContentLoaded', function () {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
-    // 2. Модальное окно (уже есть в edit_car.html, стили добавлены в style.css)
-
-    // 3. Стикеры
-    function showSticker(message, type = 'info', duration = 3000) {
-        const sticker = document.createElement('div');
-        sticker.classList.add('sticker', type);
-        sticker.innerHTML = message + '<button class="sticker-close">×</button>';
-        document.body.appendChild(sticker);
-
-        setTimeout(() => {
-            sticker.classList.add('fade-out');
-            setTimeout(() => sticker.remove(), 300);
-        }, duration);
-
-        sticker.querySelector('.sticker-close').addEventListener('click', () => {
-            sticker.classList.add('fade-out');
-            setTimeout(() => sticker.remove(), 300);
-        });
-    }
-
-    // 4. Выдвигающаяся панель (для обычных пользователей)
-    console.log('isAuthenticated:', window.isAuthenticated); // Для отладки
-    if (window.isAuthenticated === 'true') { // Сравниваем как строку
-        const sidebar = document.createElement('div');
-        sidebar.classList.add('sidebar');
-        sidebar.innerHTML = `
-            <div class="sidebar-tab">☰ Панель</div>
-            <div class="sidebar-content">
-                <h3>Быстрые действия</h3>
-                <ul>
-                    <li><a href="${window.urls.car_list}">Список автомобилей</a></li>
-                    <li><a href="${window.urls.profile}">Профиль</a></li>
-                    <li><a href="${window.urls.create_car}">Добавить автомобиль</a></li>
-                    <li><a href="${window.urls.favorite_list}">Избранное</a></li>
-                </ul>
-            </div>
-        `;
-        document.body.appendChild(sidebar);
-
-        const sidebarTab = sidebar.querySelector('.sidebar-tab');
-        sidebarTab.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-        });
-    }
-
-    // 5. Проверка корректности данных
+    // 2. Проверка корректности данных
     function validateInput(input, regex, errorMessage) {
         input.addEventListener('input', () => {
             if (!regex.test(input.value) && input.value !== '') {

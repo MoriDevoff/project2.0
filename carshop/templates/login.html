@@ -1,36 +1,80 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-lg">
-    <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Вход</h2>
-    <form method="post">
+<div class="max-w-md mx-auto mt-6 sm:mt-10 p-4 sm:p-6 rounded-lg shadow-xl" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+    <h2 class="text-xl sm:text-2xl font-bold text-center mb-4 sm:mb-6" style="color: var(--text-color);">Вход</h2>
+    <form method="post" class="space-y-4">
         {% csrf_token %}
         <div class="space-y-4">
             <div>
-                <label for="username" class="block text-sm font-medium text-gray-700">Имя пользователя</label>
-                <input type="text" name="username" id="username" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                <label for="username" class="block text-sm sm:text-base font-medium" style="color: var(--secondary-color);">Имя пользователя</label>
+                <input type="text" name="username" id="username" required class="mt-1 block w-full p-2 sm:p-3 border rounded-md text-sm sm:text-base" style="border-color: var(--border-color);">
             </div>
             <div>
-                <label for="password" class="block text-sm font-medium text-gray-700">Пароль</label>
-                <input type="password" name="password" id="password" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                <label for="password" class="block text-sm sm:text-base font-medium" style="color: var(--secondary-color);">Пароль</label>
+                <div class="relative">
+                    <input type="password" name="password" id="password" required class="mt-1 block w-full p-2 sm:p-3 border rounded-md text-sm sm:text-base" style="border-color: var(--border-color);">
+                    <a type="button" id="togglePassword"
+                       class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer group"
+                       style="color: var(--secondary-color);">
+                        <svg id="eyeIcon"
+                             class="h-5 w-5 transition-all duration-200 group-hover:scale-110 group-hover:text-blue-500"
+                             fill="none"
+                             stroke="currentColor"
+                             viewBox="0 0 24 24"
+                             xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                    </a>
+                </div>
+                <a href="{% url 'password_reset_request' %}" class="block mt-2 text-sm" style="color: var(--btn-bg);">Забыли пароль?</a>
             </div>
         </div>
-        <div class="mt-6 text-center">
-            <button type="submit" class="inline-block bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors">
+        <div class="mt-4 sm:mt-6 text-center">
+            <button type="submit" class="inline-block px-4 sm:px-5 py-2 sm:py-3 rounded text-sm sm:text-base" style="background-color: var(--btn-bg); color: var(--btn-text);">
                 Войти
             </button>
-            <a href="{% url 'register' %}" class="ml-4 inline-block px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
+            <a href="{% url 'register' %}"
+               class="ml-2 sm:ml-4 inline-block px-4 sm:px-5 py-2 sm:py-3 rounded text-sm sm:text-base border border-black hover:bg-gray-200 transition-colors cursor-pointer"
+               style="background-color: #c4c6c3; color: #111827; border: 1px solid #000;">
                 Регистрация
-            </a>
-            <a href="{% url 'password_reset_request' %}" class="ml-4 inline-block px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors">
-                Забыли пароль?
             </a>
         </div>
         {% if messages %}
         {% for message in messages %}
-        <p class="mt-4 text-center text-red-600">{{ message }}</p>
+        <p class="mt-4 text-center text-sm sm:text-base" style="color: var(--error-color);">{{ message }}</p>
         {% endfor %}
         {% endif %}
     </form>
 </div>
+
+<style>
+    button[type="submit"]:hover, a[href="{% url 'register' %}"]:hover {
+        background-color: var(--btn-hover);
+    }
+    #togglePassword:hover {
+        color: var(--btn-bg);
+    }
+</style>
+
+<script>
+    document.getElementById('togglePassword').addEventListener('click', function () {
+        const passwordInput = document.getElementById('password');
+        const eyeIcon = document.getElementById('eyeIcon');
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            eyeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m3.858.223a3 3 0 114.243 4.243M3 3l18 18"></path>';
+        } else {
+            passwordInput.type = 'password';
+            eyeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
+        }
+    });
+</script>
 {% endblock %}

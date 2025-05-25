@@ -2,61 +2,62 @@
 {% load custom_filters %}
 
 {% block content %}
-<div class="container mx-auto p-6">
-    <h1 class="text-2xl font-bold mb-4">Редактировать объявление</h1>
+<div class="mx-auto p-4 sm:p-6 md:p-8" style="background-color: var(--background-color);">
+    <h1 class="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6" style="color: var(--text-color);">Редактировать объявление</h1>
 
     {% if messages %}
     <div class="mb-4">
         {% for message in messages %}
-        <div class="p-4 mb-2 text-white {% if message.tags == 'success' %}bg-green-500{% else %}bg-red-500{% endif %} rounded">
+        <div class="p-3 sm:p-4 mb-2 rounded text-sm sm:text-base" style="{% if message.tags == 'success' %}background-color: var(--success-bg); color: var(--success-color);{% else %}background-color: var(--error-bg); color: var(--error-color);{% endif %}">
             {{ message }}
         </div>
         {% endfor %}
     </div>
     {% endif %}
 
-    <form method="post" enctype="multipart/form-data" class="space-y-4">
+    <form method="post" enctype="multipart/form-data" class="space-y-4 sm:space-y-6">
         {% csrf_token %}
         {{ form.non_field_errors }}
         {{ spec_form.non_field_errors }}
 
-        <!-- Поля автомобиля -->
-        {% for field in form %}
-        {% if not field.name|startswith:"photo_" and not field.name|startswith:"delete_photo_" %}
-        <div class="mb-4">
-            <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium mb-1">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-            <div class="text-red-500 text-sm mt-1">
-                {{ field.errors }}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            {% for field in form %}
+            {% if not field.name|startswith:"photo_" and not field.name|startswith:"delete_photo_" %}
+            <div class="mb-4">
+                <label for="{{ field.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <div class="text-xs sm:text-sm mt-1" style="color: var(--error-color);">
+                    {{ field.errors }}
+                </div>
+                {% endif %}
             </div>
             {% endif %}
+            {% endfor %}
         </div>
-        {% endif %}
-        {% endfor %}
 
-        <!-- Поля характеристик (CarSpecification) -->
-        {% for field in spec_form %}
-        <div class="mb-4">
-            <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium mb-1">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-            <div class="text-red-500 text-sm mt-1">
-                {{ field.errors }}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            {% for field in spec_form %}
+            <div class="mb-4">
+                <label for="{{ field.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <div class="text-xs sm:text-sm mt-1" style="color: var(--error-color);">
+                    {{ field.errors }}
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
+            {% endfor %}
         </div>
-        {% endfor %}
 
-        <!-- Существующие фото с чекбоксами для удаления -->
-        <h2 class="text-xl font-semibold mt-6 mb-2">Существующие фото</h2>
+        <h2 class="text-lg sm:text-xl font-semibold mt-6 mb-2 sm:mt-8" style="color: var(--secondary-color);">Существующие фото</h2>
         {% if car.carphoto_set.all %}
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-4">
             {% for photo in car.carphoto_set.all %}
             <div class="relative">
-                <img src="{{ photo.get_photo }}" alt="Фото автомобиля" class="w-full h-32 object-cover rounded-lg">
+                <img src="{{ photo.get_photo }}" alt="Фото автомобиля" class="w-full h-24 sm:h-32 object-cover rounded-lg">
                 <div class="mt-2">
-                    <label class="flex items-center">
+                    <label class="flex items-center text-xs sm:text-sm">
                         <input type="checkbox" name="delete_photo_{{ photo.id }}" class="mr-2" /> Удалить фото
                     </label>
                 </div>
@@ -64,56 +65,73 @@
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-gray-500">Нет загруженных фото.</p>
+        <p class="text-sm sm:text-base" style="color: var(--secondary-color);">Нет загруженных фото.</p>
         {% endif %}
 
-        <!-- Поля для новых фото (URL) -->
-        <div>
-            <h2 class="text-xl font-semibold mt-6 mb-2">Добавить новые фото (URL)</h2>
+        <h2 class="text-lg sm:text-xl font-semibold mt-6 mb-2 sm:mt-8" style="color: var(--secondary-color);">Добавить новые фото (URL)</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {% for field in form %}
             {% if field.name|startswith:"photo_url_" %}
             <div class="mb-4">
-                <label for="{{ field.id_for_label }}" class="block text-gray-700 font-semibold mb-1">{{ field.label }}</label>
+                <label for="{{ field.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ field.label }}</label>
                 {{ field }}
                 {% if field.errors %}
-                <span class="text-red-500 text-sm">{{ field.errors }}</span>
+                <span class="text-xs sm:text-sm" style="color: var(--error-color);">{{ field.errors }}</span>
                 {% endif %}
             </div>
             {% endif %}
             {% endfor %}
         </div>
 
-        <!-- Поля для новых фото (файлы) -->
-        <div>
-            <h2 class="text-xl font-semibold mt-6 mb-2">Добавить новые фото (файлы)</h2>
+        <h2 class="text-lg sm:text-xl font-semibold mt-6 mb-2 sm:mt-8" style="color: var(--secondary-color);">Добавить новые фото (файлы)</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {% for field in form %}
             {% if field.name|startswith:"photo_file_" %}
             <div class="mb-4">
-                <label for="{{ field.id_for_label }}" class="block text-gray-700 font-semibold mb-1">{{ field.label }}</label>
+                <label for="{{ field.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ field.label }}</label>
                 {{ field }}
                 {% if field.errors %}
-                <span class="text-red-500 text-sm">{{ field.errors }}</span>
+                <span class="text-xs sm:text-sm" style="color: var(--error-color);">{{ field.errors }}</span>
                 {% endif %}
             </div>
             {% endif %}
             {% endfor %}
         </div>
 
-        <!-- Кнопки -->
-        <div class="flex space-x-4 mt-6">
-            <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">Сохранить</button>
-            <a href="{% url 'car_detail' car_id=car.id %}" class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400">Отмена</a>
-            <button type="button" id="deleteCarButton" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">Удалить объявление</button>
+        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mt-6 sm:mt-8">
+            <button type="submit" class="px-4 sm:px-6 py-2 sm:py-3 rounded text-sm sm:text-base" style="background-color: var(--btn-bg); color: var(--btn-text);">Сохранить</button>
+            <a href="{% url 'car_detail' car_id=car.id %}"
+               class="px-4 sm:px-6 py-2 sm:py-3 rounded text-sm sm:text-base text-center w-full sm:w-auto border border-black"
+               style="background-color: #878787; color: white;">
+                Отмена
+            </a>
+            <a
+                    type="button"
+                    id="deleteCarButton"
+                    class="px-4 sm:px-6 py-2 sm:py-3 rounded text-sm sm:text-base w-full sm:w-auto font-medium border border-black select-none cursor-pointer hover:bg-red-600 transition-colors duration-200"
+                    style="background-color: #ef4444; color: white;"
+            >
+                Удалить объявление
+            </a>
         </div>
     </form>
 </div>
 
+<style>
+    button[type="submit"]:hover, a[href="{% url 'car_detail' car_id=car.id %}"]:hover {
+        background-color: var(--btn-hover);
+    }
+    #deleteCarButton:hover {
+        background-color: var(--error-hover);
+    }
+</style>
+
 <script>
     function showSticker(message, type) {
         const sticker = document.createElement('div');
-        sticker.className = `fixed top-4 left-1/2 transform -translate-x-1/2 p-4 rounded-lg shadow-lg text-white text-center z-50 ${
-            type === 'success' ? 'bg-green-500' : 'bg-red-500'
-        }`;
+        sticker.className = `fixed top-4 left-1/2 transform -translate-x-1/2 p-4 rounded-lg shadow-lg text-white text-center z-50`;
+        sticker.style.backgroundColor = type === 'success' ? 'var(--success-bg)' : 'var(--error-bg)';
+        sticker.style.color = type === 'success' ? 'var(--success-color)' : 'var(--error-color)';
         sticker.textContent = message;
         document.body.appendChild(sticker);
 

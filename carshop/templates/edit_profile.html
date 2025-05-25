@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6 md:p-8 fade-in">
-    <h2 class="text-2xl md:text-3xl font-extrabold text-gray-900 mb-6 text-center">Редактирование профиля</h2>
+<div class="max-w-md mx-auto rounded-xl shadow-lg p-4 sm:p-6 md:p-8 fade-in" style="background-color: var(--card-bg); border: 1px solid var(--border-color);">
+    <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold mb-4 sm:mb-6 text-center" style="color: var(--text-color);">Редактирование профиля</h2>
     {% if messages %}
     {% for message in messages %}
-    <div class="mb-4 p-3 rounded {% if message.tags == 'success' %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %} text-center text-sm md:text-base">
+    <div class="mb-4 p-3 rounded text-center text-sm sm:text-base" style="{% if message.tags == 'success' %}background-color: var(--success-bg); color: var(--success-color);{% else %}background-color: var(--error-bg); color: var(--error-color);{% endif %}">
         {{ message }}
     </div>
     {% endfor %}
@@ -13,7 +13,7 @@
     <form method="post" enctype="multipart/form-data" class="space-y-4">
         {% csrf_token %}
         {% if form.errors %}
-        <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-center text-sm md:text-base">
+        <div class="mb-4 p-3 rounded text-center text-sm sm:text-base" style="background-color: var(--error-bg); color: var(--error-color);">
             {% for field, errors in form.errors.items %}
             {% for error in errors %}
             {{ error }}<br>
@@ -21,23 +21,44 @@
             {% endfor %}
         </div>
         {% endif %}
-        {% for field in form %}
-        <div>
-            <label for="{{ field.id_for_label }}" class="block text-gray-700 font-medium text-sm md:text-base">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-            <span class="text-red-500 text-sm">{{ field.errors }}</span>
-            {% endif %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {% for field in form %}
+            <div>
+                <label for="{{ field.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <span class="text-xs sm:text-sm" style="color: var(--error-color);">{{ field.errors }}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-        <div class="text-center">
-            <button type="submit" class="inline-block bg-blue-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm md:text-base">
-                Сохранить изменения <i class="fas fa-save ml-2"></i>
+        <div class="flex flex-col gap-6 items-center">  <!-- Центрирование по горизонтали -->
+            <!-- Кнопка "Сохранить изменения" -->
+            <button type="submit"
+                    class="w-full max-w-xs px-4 sm:px-5 py-2 sm:py-3 rounded-lg text-sm sm:text-base border border-black hover:opacity-90 transition-all cursor-pointer text-center"
+                    style="background-color: var(--btn-bg); color: var(--btn-text);">
+        <span class="flex items-center justify-center">  <!-- Центрирование содержимого -->
+            <span>Сохранить изменения</span>
+            <i class="fas fa-save ml-2"></i>
+        </span>
             </button>
-            <a href="{% url 'profile' %}" class="ml-4 inline-block bg-gray-600 text-white px-4 md:px-5 py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm md:text-base">
-                Вернуться к профилю <i class="fas fa-arrow-left ml-2"></i>
+
+            <!-- Кнопка "Вернуться к профилю" -->
+            <a href="{% url 'profile' %}"
+               class="w-full max-w-xs px-4 sm:px-5 py-2 sm:py-3 rounded-lg text-sm sm:text-base border border-black hover:opacity-90 transition-all cursor-pointer text-center"
+               style="background-color: #6b7280; color: white;">
+        <span class="flex items-center justify-center">  <!-- Центрирование содержимого -->
+            <span>Вернуться к профилю</span>
+            <i class="fas fa-arrow-left ml-2"></i>
+        </span>
             </a>
         </div>
     </form>
 </div>
+
+<style>
+    button[type="submit"]:hover, a[href="{% url 'profile' %}"]:hover {
+        background-color: var(--btn-hover);
+    }
+</style>
 {% endblock %}
