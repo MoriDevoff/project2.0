@@ -11,6 +11,11 @@
         {{ message }}
     </div>
     {% endif %}
+    {% if message.tags == 'error' %}
+    <div class="mb-4 p-3 rounded text-center text-sm md:text-base" style="background-color: var(--error-bg); color: var(--error-color);">
+        {{ message }}
+    </div>
+    {% endif %}
     {% endfor %}
     {% endif %}
     <form method="post" id="registrationForm" class="space-y-6">
@@ -144,32 +149,32 @@
         });
 
         emailInput.addEventListener('input', function () {
-            const email = this.value.trim();
-            if (email) {
-                fetch('/check-email/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                    },
-                    body: `email=${encodeURIComponent(email)}`
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.exists) {
-                        errorSpan.textContent = 'Этот email уже зарегистрирован.';
-                    } else {
-                        errorSpan.textContent = '';
-                    }
-                })
-                .catch(error => {
-                    console.error('Ошибка проверки email:', error);
-                    errorSpan.textContent = 'Ошибка проверки email.';
-                });
+    const email = this.value.trim();
+    if (email) {
+        fetch('/check-email/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: `email=${encodeURIComponent(email)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.exists) {
+                errorSpan.textContent = 'Этот email уже зарегистрирован.';
             } else {
                 errorSpan.textContent = '';
             }
+        })
+        .catch(error => {
+            console.error('Ошибка проверки email:', error);
+            errorSpan.textContent = 'Ошибка проверки email.';
         });
+    } else {
+        errorSpan.textContent = '';
+    }
+});
 
         form.addEventListener('submit', function (e) {
             if (passwordInput.value !== confirmPasswordInput.value) {
@@ -183,10 +188,34 @@
                 return;
             }
             loading.classList.remove('hidden');
-            setTimeout(() => {
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: new FormData(form)
+            })
+            .then(response => response.json())
+            .then(data => {
                 loading.classList.add('hidden');
-                form.submit();
-            }, 1000); // Симуляция задержки
+                if (data.success) {
+                    if (data.redirect) {
+                        window.location.href = data.redirect; // Перенаправление на страницу входа
+                    } else {
+                        errorContainer.textContent = data.message || 'Регистрация успешна!';
+                        form.reset();
+                    }
+                } else {
+                    errorContainer.textContent = data.error ? JSON.parse(data.error).__all__[0].message : 'Произошла ошибка.';
+                }
+            })
+            .catch(error => {
+                loading.classList.add('hidden');
+                errorContainer.textContent = 'Ошибка при отправке формы.';
+                console.error('Ошибка:', error);
+            });
+            e.preventDefault();
         });
     });
 </script>

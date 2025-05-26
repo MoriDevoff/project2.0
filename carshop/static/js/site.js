@@ -44,4 +44,29 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('input[type="password"]').forEach(input => {
         validateInput(input, passwordRegex, 'Пароль должен содержать минимум 8 символов, включая буквы и цифры!');
     });
+
+    // 3. Динамическое обновление навигации
+    function updateNavigation() {
+        const navLinks = document.getElementById('navLinks');
+        if (navLinks) {
+            navLinks.innerHTML = ''; // Очищаем существующие ссылки
+            const isAuthenticated = window.isAuthenticated === "true";
+            if (isAuthenticated) {
+                navLinks.innerHTML = `
+                    <a href="${window.urls.car_list}" class="hover:text-yellow-300 transition-colors">Главная</a>
+                    <a href="${window.urls.create_car}" class="hover:text-yellow-300 transition-colors">Добавить объявление</a>
+                    <a href="${window.urls.profile}" class="relative hover:text-yellow-300 transition-colors">Профиль</a>
+                    <a href="${window.urls.favorite_list}" class="hover:text-yellow-300 transition-colors">Избранное</a>
+                    <a href="${window.urls.logout}" class="hover:text-yellow-300 transition-colors">Выйти</a>
+                `;
+            } else {
+                navLinks.innerHTML = `
+                    <a href="${window.urls.login}" class="hover:text-yellow-300 transition-colors">Войти</a>
+                    <a href="${window.urls.register}" class="hover:text-yellow-300 transition-colors">Регистрация</a>
+                `;
+            }
+        }
+    }
+    // 4. Обновление навигации при загрузке
+    updateNavigation();
 });

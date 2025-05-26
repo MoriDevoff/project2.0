@@ -4,8 +4,8 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils.translation import gettext_lazy as _
-
 import uuid
+from django.core.cache import cache
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, email, password, phone=None, **extra_fields):
@@ -38,14 +38,16 @@ class CustomUserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=150, unique=True)
     email = models.EmailField(unique=True)
-    phone = models.CharField(max_length=15, blank=True, null=True)
+    phone = models.CharField(max_length=15, blank=True, null=True, validators=[
+        MinValueValidator(10, message="Phone number must be at least 10 digits"),
+    ])
     first_name = models.CharField(max_length=30, blank=True, null=True)
     last_name = models.CharField(max_length=30, blank=True, null=True)
     company_name = models.CharField(max_length=100, blank=True)
     date_joined = models.DateTimeField(default=timezone.now)
     avatar_url = models.URLField(blank=True, null=True)
     avatar_file = models.ImageField(upload_to='avatars/', blank=True, null=True)
-    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)])
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
@@ -62,8 +64,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     def get_avatar(self):
         return self.avatar_file.url if self.avatar_file else (self.avatar_url or 'https://avatars.mds.yandex.net/i?id=e54ae3f787cf29aa21be07d6762ecc0dfaa02fa2-5014002-images-thumbs&n=13')
 
+    def clean(self):
+        if self.phone and not self.phone.isdigit():
+            raise ValidationError({'phone': 'Phone number must contain only digits.'})
+
     class Meta:
         db_table = 'Users'
+        verbose_name = _('user')
+        verbose_name_plural = _('users')
 
 class Car(models.Model):
     FUEL_TYPE_CHOICES = [
@@ -89,10 +97,10 @@ class Car(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     brand = models.CharField(max_length=100)
     model = models.CharField(max_length=100)
-    year = models.PositiveIntegerField()
-    price = models.DecimalField(max_digits=12, decimal_places=2)
-    mileage = models.PositiveIntegerField()
-    engine_capacity = models.DecimalField(max_digits=4, decimal_places=1)
+    year = models.PositiveIntegerField(validators=[MaxValueValidator(timezone.now().year)])
+    price = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    mileage = models.PositiveIntegerField(validators=[MinValueValidator(0)])
+    engine_capacity = models.DecimalField(max_digits=4, decimal_places=1, validators=[MinValueValidator(0.1)])
     fuel_type = models.CharField(max_length=50, choices=FUEL_TYPE_CHOICES)
     transmission = models.CharField(max_length=50, choices=TRANSMISSION_CHOICES)
     color = models.CharField(max_length=50, blank=True, null=True)
@@ -109,11 +117,10 @@ class Car(models.Model):
         return first_photo.get_photo() if first_photo else '/media/car_photos/default-car.jpg'
 
     def delete(self, *args, **kwargs):
-        # Удаляем связанные объекты перед удалением автомобиля
-        self.carphoto_set.all().delete()  # Удаляем фото
-        self.favorites.all().delete()  # Удаляем избранное
-        self.purchaserequest_set.all().delete()  # Удаляем запросы на покупку
-        self.pricehistory_set.all().delete()  # Удаляем историю цен
+        self.carphoto_set.all().delete()
+        self.favorites.all().delete()
+        self.purchaserequest_set.all().delete()
+        self.pricehistory_set.all().delete()
         super().delete(*args, **kwargs)
 
 class CarPhoto(models.Model):
@@ -193,6 +200,8 @@ class PurchaseRequest(models.Model):
         if self.status == 'Одобрено' and self.final_price:
             self.buyer.balance -= self.final_price
             self.seller.balance += self.final_price
+            if self.buyer.balance < 0:
+                raise ValidationError("Insufficient balance for buyer.")
             self.buyer.save()
             self.seller.save()
         super().save(*args, **kwargs)
@@ -216,3 +225,44 @@ class EmailVerification(models.Model):
 
     def __str__(self):
         return f"Verification for {self.user.username}"
+
+# Сигналы для инвалидации кеша
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+
+@receiver(post_save, sender=Car)
+@receiver(post_delete, sender=Car)
+def clear_car_cache(sender, instance, **kwargs):
+    try:
+        cache.delete_pattern('carshop_*')
+        cache.delete_pattern(f'car_detail_{instance.id}_*')
+    except AttributeError:
+        pass  # Игнорируем, если cache не поддерживает delete_pattern
+
+@receiver(post_save, sender=User)
+@receiver(post_delete, sender=User)
+def clear_user_cache(sender, instance, **kwargs):
+    try:
+        cache.delete_pattern(f'profile_{instance.id}_*')
+        cache.delete_pattern('unread_deals_count_*')
+    except AttributeError:
+        pass  # Игнорируем, если cache не поддерживает delete_pattern
+
+@receiver(post_save, sender=Favorite)
+@receiver(post_delete, sender=Favorite)
+def clear_favorite_cache(sender, instance, **kwargs):
+    try:
+        cache.delete_pattern(f'favorite_list_{instance.user.id}_*')
+        cache.delete_pattern(f'car_detail_{instance.car.id}_*')
+    except AttributeError:
+        pass  # Игнорируем, если cache не поддерживает delete_pattern
+
+@receiver(post_save, sender=PurchaseRequest)
+@receiver(post_delete, sender=PurchaseRequest)
+def clear_purchase_cache(sender, instance, **kwargs):
+    try:
+        cache.delete_pattern(f'profile_{instance.buyer.id}_*')
+        cache.delete_pattern(f'profile_{instance.seller.id}_*')
+        cache.delete_pattern('unread_deals_count_*')
+    except AttributeError:
+        pass  # Игнорируем, если cache не поддерживает delete_pattern

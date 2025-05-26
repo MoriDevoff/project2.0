@@ -9,11 +9,11 @@ from django.utils import timezone
 from django.db.models import Q, Count
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
+from django.views.decorators.cache import never_cache
 from .forms import RegistrationForm, CarForm, UserProfileForm, PurchaseForm, PasswordResetForm, SetPasswordForm, ManageBalanceForm, ManageUserForm, CarSpecificationForm
 from .models import User, Car, CarPhoto, PurchaseRequest, EmailVerification, PriceHistory, Favorite, CarSpecification
 from datetime import timedelta
 import json
-from django.core.serializers.json import DjangoJSONEncoder
 import logging
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
@@ -30,14 +30,16 @@ def get_unread_deals_count(user):
     unread_sales_count = seller_requests.filter(is_read=False, status='В ожидании').count()
     return unread_purchases_count + unread_sales_count
 
-@login_required
 def car_list(request):
     cars = Car.objects.filter(is_sold=False).annotate(favorite_count=Count('favorites'))
-    unread_deals_count = get_unread_deals_count(request.user)
+    unread_deals_count = get_unread_deals_count(request.user) if request.user.is_authenticated else 0
 
-    # Добавляем поле is_favorited для каждого автомобиля
-    for car in cars:
-        car.is_favorited = Favorite.objects.filter(car=car, user=request.user).exists()
+    if request.user.is_authenticated:
+        for car in cars:
+            car.is_favorited = Favorite.objects.filter(car=car, user=request.user).exists()
+    else:
+        for car in cars:
+            car.is_favorited = False
 
     return render(request, 'car_list.html', {
         'cars': cars,
@@ -112,7 +114,6 @@ def car_search(request):
 
     unread_deals_count = get_unread_deals_count(request.user)
 
-    # Добавляем поле is_favorited для каждого автомобиля
     for car in cars:
         car.is_favorited = Favorite.objects.filter(car=car, user=request.user).exists()
 
@@ -121,14 +122,15 @@ def car_search(request):
         'unread_deals_count': unread_deals_count
     })
 
-@login_required
 def car_detail(request, car_id):
     car = get_object_or_404(
         Car.objects.annotate(favorite_count=Count('favorites')),
         id=car_id
     )
-    # Добавляем поле is_favorited для автомобиля
-    car.is_favorited = Favorite.objects.filter(car=car, user=request.user).exists()
+    if request.user.is_authenticated:
+        car.is_favorited = Favorite.objects.filter(car=car, user=request.user).exists()
+    else:
+        car.is_favorited = False
 
     price_history = PriceHistory.objects.filter(car=car).order_by('change_date')
     price_data = [
@@ -154,7 +156,7 @@ def car_detail(request, car_id):
         }]
     price_data_json = json.dumps(price_data)
 
-    unread_deals_count = get_unread_deals_count(request.user)
+    unread_deals_count = get_unread_deals_count(request.user) if request.user.is_authenticated else 0
 
     return render(request, 'car_detail.html', {
         'car': car,
@@ -163,6 +165,7 @@ def car_detail(request, car_id):
         'unread_deals_count': unread_deals_count
     })
 
+@never_cache
 def register(request):
     if request.method == 'POST':
         form = RegistrationForm(request.POST)
@@ -172,7 +175,6 @@ def register(request):
             user.avatar_url = 'https://avatars.mds.yandex.net/i?id=e54ae3f787cf29aa21be07d6762ecc0dfaa02fa2-5014002-images-thumbs&n=13'
             user.save()
 
-            # Проверка, является ли пользователь суперюзером
             if not user.is_superuser:
                 expiration_date = timezone.now() + timedelta(days=settings.ACCOUNT_ACTIVATION_DAYS)
                 verification = EmailVerification.objects.create(
@@ -186,7 +188,7 @@ def register(request):
                 try:
                     send_mail(subject, message, from_email, [user.email], fail_silently=False)
                     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                        return JsonResponse({'success': True, 'message': 'Регистрация успешна! Проверьте вашу почту для подтверждения email.'})
+                        return JsonResponse({'success': True, 'message': 'Регистрация успешна! Проверьте вашу почту для подтверждения email.', 'redirect': reverse('login')})
                     messages.success(request, 'Регистрация успешна! Проверьте вашу почту для подтверждения email.')
                 except Exception as e:
                     user.delete()
@@ -196,12 +198,12 @@ def register(request):
                     return render(request, 'register.html', {'form': form})
             else:
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'success': True, 'message': 'Регистрация суперюзера успешна! Вы можете войти.'})
+                    return JsonResponse({'success': True, 'message': 'Регистрация суперюзера успешна! Вы можете войти.', 'redirect': reverse('login')})
                 messages.success(request, 'Регистрация суперюзера успешна! Вы можете войти.')
 
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': True})
-            return redirect('login')
+                return JsonResponse({'success': True, 'redirect': reverse('login')})
+            return redirect(reverse('login'))
         else:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': False, 'error': form.errors.as_json()}, status=400)
@@ -210,6 +212,7 @@ def register(request):
         form = RegistrationForm()
     return render(request, 'register.html', {'form': form})
 
+@never_cache
 def verify_email(request, token):
     try:
         verification = EmailVerification.objects.get(token=token, is_used=False, expiration_date__gt=timezone.now())
@@ -224,6 +227,7 @@ def verify_email(request, token):
         messages.error(request, 'Неверный или просроченный токен подтверждения.')
         return redirect('register')
 
+@never_cache
 def login_view(request):
     if request.method == 'POST':
         username = request.POST['username']
@@ -237,22 +241,33 @@ def login_view(request):
                 return render(request, 'login.html')
             login(request, user)
             messages.success(request, 'Вы успешно вошли!')
-            return redirect('car_list')
+            return redirect(reverse('car_list'))
         else:
             messages.error(request, 'Неверное имя пользователя или пароль.')
     return render(request, 'login.html')
 
+@never_cache
 def blocked(request, block_reason=None):
     if not request.user.is_authenticated or request.user.is_active:
         return redirect('car_list')
     return render(request, 'blocked.html', {'block_reason': block_reason})
 
+@never_cache
 def logout_view(request):
-    logout(request)
-    messages.success(request, 'Вы успешно вышли из системы!')
-    return redirect('car_list')
+    if request.user.is_authenticated:
+        logger.info(f"Logging out user: {request.user.username}")
+        logout(request)
+        request.session.flush()  # Очищает сессию
+        response = redirect('car_list')
+        response.delete_cookie('sessionid')  # Удаляем куку сессии
+        messages.success(request, 'Вы успешно вышли из системы!')
+        return response
+    else:
+        logger.info("No user authenticated during logout")
+        return redirect('car_list')
 
 @login_required
+@never_cache
 def create_car(request):
     photo_range = range(1, 11)
     photo_url_fields = [f'photo_url_{i}' for i in photo_range]
@@ -331,6 +346,7 @@ def profile(request):
     })
 
 @login_required
+@never_cache
 def purchases(request):
     buyer_requests = PurchaseRequest.objects.filter(buyer=request.user).order_by('-request_date')
     seller_requests = PurchaseRequest.objects.filter(seller=request.user).order_by('-request_date')
@@ -352,6 +368,7 @@ def purchases(request):
     })
 
 @login_required
+@never_cache
 def reset_notifications(request):
     if request.method == 'POST':
         PurchaseRequest.objects.filter(buyer=request.user, is_read=False, status__in=['Одобрено', 'Отклонено']).update(is_read=True)
@@ -361,6 +378,7 @@ def reset_notifications(request):
     return redirect('profile')
 
 @login_required
+@never_cache
 def purchase_car(request, car_id):
     car = get_object_or_404(Car, id=car_id)
     if request.user == car.user:
@@ -399,6 +417,7 @@ def purchase_car(request, car_id):
     })
 
 @login_required
+@never_cache
 def respond_purchase(request, purchase_id, action):
     purchase = get_object_or_404(PurchaseRequest, id=purchase_id)
     if request.user != purchase.seller:
@@ -426,6 +445,7 @@ def respond_purchase(request, purchase_id, action):
     return redirect('profile')
 
 @login_required
+@never_cache
 def edit_profile(request):
     if request.method == 'POST':
         form = UserProfileForm(request.POST, request.FILES, instance=request.user)
@@ -451,6 +471,7 @@ def edit_profile(request):
     })
 
 @login_required
+@never_cache
 def edit_car(request, car_id):
     car = get_object_or_404(Car, id=car_id)
     if car.user != request.user:
@@ -528,6 +549,7 @@ def edit_car(request, car_id):
 
 @csrf_exempt
 @login_required
+@never_cache
 def delete_car(request, car_id):
     if request.method != 'POST' and not request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'success': False, 'error': 'Метод не разрешён'}, status=405)
@@ -538,9 +560,7 @@ def delete_car(request, car_id):
             logger.warning(f"Пользователь {request.user} попытался удалить чужое объявление {car_id}")
             return JsonResponse({'success': False, 'error': 'У вас нет прав для удаления этого объявления'}, status=403)
 
-        # Удаляем автомобиль (связанные объекты будут удалены автоматически через сигналы)
         car.delete()
-
         logger.info(f"Объявление {car_id} успешно удалено пользователем {request.user}")
         return JsonResponse({'success': True})
 
@@ -551,6 +571,7 @@ def delete_car(request, car_id):
         logger.error(f"Ошибка при удалении объявления {car_id}: {str(e)}")
         return JsonResponse({'success': False, 'error': 'Внутренняя ошибка сервера'}, status=500)
 
+@never_cache
 def password_reset_request(request):
     if request.method == 'POST':
         form = PasswordResetForm(request.POST)
@@ -581,6 +602,7 @@ def password_reset_request(request):
         form = PasswordResetForm()
     return render(request, 'password_reset_request.html', {'form': form})
 
+@never_cache
 def password_reset_confirm(request, token):
     try:
         verification = EmailVerification.objects.get(token=token, is_used=False, expiration_date__gt=timezone.now())
@@ -603,6 +625,7 @@ def password_reset_confirm(request, token):
 
 @csrf_exempt
 @login_required
+@never_cache
 def toggle_favorite(request, car_id):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Метод не разрешён'}, status=405)
@@ -623,6 +646,17 @@ def toggle_favorite(request, car_id):
         return redirect('car_detail', car_id=car.id)
 
 @login_required
+def favorite_list(request):
+    favorites = Favorite.objects.filter(user=request.user).order_by('-added_date')
+    unread_deals_count = get_unread_deals_count(request.user)
+
+    return render(request, 'favorite_list.html', {
+        'favorites': favorites,
+        'unread_deals_count': unread_deals_count
+    })
+
+@login_required
+@never_cache
 def manage_users(request):
     if not request.user.is_superuser:
         messages.error(request, 'У вас нет прав для доступа к этой странице.')
@@ -631,7 +665,7 @@ def manage_users(request):
     if request.method == 'POST':
         form = ManageUserForm(request.POST)
         if form.is_valid():
-            user = form.cleaned_data['user']  # Получаем объект User
+            user = form.cleaned_data['user']
             action = form.cleaned_data['action']
             if user == request.user:
                 messages.error(request, 'Вы не можете выполнить это действие над самим собой.')
@@ -666,6 +700,7 @@ def manage_users(request):
     })
 
 @login_required
+@never_cache
 def manage_ads(request):
     if not request.user.is_superuser:
         messages.error(request, 'У вас нет прав для доступа к этой странице.')
@@ -695,6 +730,7 @@ def manage_ads(request):
     })
 
 @login_required
+@never_cache
 def manage_balances(request):
     if not request.user.is_superuser:
         messages.error(request, 'У вас нет прав для доступа к этой странице.')
@@ -703,7 +739,7 @@ def manage_balances(request):
     if request.method == 'POST':
         form = ManageBalanceForm(request.POST)
         if form.is_valid():
-            user = form.cleaned_data['user']  # Получаем объект User
+            user = form.cleaned_data['user']
             amount = form.cleaned_data['amount']
             action = form.cleaned_data['action']
             if amount <= 0:
@@ -732,18 +768,9 @@ def manage_balances(request):
         'unread_deals_count': unread_deals_count
     })
 
-@login_required
-def favorite_list(request):
-    favorites = Favorite.objects.filter(user=request.user).order_by('-added_date')
-    unread_deals_count = get_unread_deals_count(request.user)
-
-    return render(request, 'favorite_list.html', {
-        'favorites': favorites,
-        'unread_deals_count': unread_deals_count,
-    })
-
 @require_POST
+@never_cache
 def check_email_availability(request):
     email = request.POST.get('email', '').strip()
-    is_available = not User.objects.filter(email=email).exists()
-    return JsonResponse({'is_available': is_available, 'email': email})
+    exists = User.objects.filter(email=email).exists()
+    return JsonResponse({'exists': exists, 'email': email})

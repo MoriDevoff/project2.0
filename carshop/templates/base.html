@@ -652,21 +652,7 @@
             <i class="fas fa-bars mobile-menu" id="mobileMenuToggle"></i>
         </div>
         <nav class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-6 text-center nav-links" id="navLinks">
-            {% if user.is_authenticated and user.is_active %}
-            <a href="{% url 'car_list' %}" class="hover:text-yellow-300 transition-colors">Главная</a>
-            <a href="{% url 'create_car' %}" class="hover:text-yellow-300 transition-colors">Добавить объявление</a>
-            <a href="{% url 'profile' %}" class="relative hover:text-yellow-300 transition-colors">
-                Профиль
-                {% if unread_deals_count > 0 %}
-                <span class="notification-badge">{{ unread_deals_count }}</span>
-                {% endif %}
-            </a>
-            <a href="{% url 'favorite_list' %}" class="hover:text-yellow-300 transition-colors">Избранное</a>
-            <a href="{% url 'logout' %}" class="hover:text-yellow-300 transition-colors">Выйти</a>
-            {% else %}
-            <a href="{% url 'login' %}" class="hover:text-yellow-300 transition-colors">Войти</a>
-            <a href="{% url 'register' %}" class="hover:text-yellow-300 transition-colors">Регистрация</a>
-            {% endif %}
+            <!-- Navigation will be populated by JavaScript -->
         </nav>
     </div>
 </header>
@@ -865,11 +851,15 @@
 
     window.addEventListener('resize', adjustMainPadding);
 
+    // Render URLs properly
     window.urls = {
         car_list: "{% url 'car_list' %}",
         create_car: "{% url 'create_car' %}",
         profile: "{% url 'profile' %}",
-        favorite_list: "{% url 'favorite_list' %}"
+        favorite_list: "{% url 'favorite_list' %}",
+        login: "{% url 'login' %}",
+        register: "{% url 'register' %}",
+        logout: "{% url 'logout' %}"
     };
     window.isAuthenticated = "{{ user.is_authenticated|lower }}";
     window.isSuperuser = "{{ user.is_superuser|lower }}";

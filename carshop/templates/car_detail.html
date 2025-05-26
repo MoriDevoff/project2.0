@@ -130,14 +130,14 @@
             <span>{{ car.favorite_count }} человек добавили в избранное</span>
         </div>
     </div>
-    </script>
 
     <div class="mt-4 sm:mt-6 text-center flex flex-wrap justify-center gap-2 sm:gap-4">
-        <a href="{% url 'car_list' %}"
+        <a href="{% url 'car_list' %}?refresh={{ current_timestamp }}"
            class="inline-block px-3 sm:px-4 py-1 sm:py-2 rounded-lg text-sm sm:text-base border border-black hover:opacity-80 transition-all cursor-pointer"
            style="background-color: var(--btn-bg); color: var(--btn-text);">
             Назад к списку <i class="fas fa-arrow-left ml-2"></i>
         </a>
+        {% if request.user.is_authenticated %}
         {% if request.user == author %}
         <a href="{% url 'edit_car' car.id %}"
            class="inline-block px-3 sm:px-4 py-1 sm:py-2 rounded-lg text-sm sm:text-base border border-black hover:opacity-80 transition-all cursor-pointer"
@@ -151,10 +151,11 @@
         >
             Удалить объявление
         </a>
-        {% elif not car.is_sold and request.user.is_authenticated %}
+        {% elif not car.is_sold %}
         <a href="{% url 'purchase_car' car.id %}" class="inline-block px-3 sm:px-4 py-1 sm:py-2 rounded-lg hover:bg-opacity-80 transition-colors text-sm sm:text-base">
             Купить <i class="fas fa-shopping-cart ml-2"></i>
         </a>
+        {% endif %}
         {% endif %}
     </div>
 </div>
@@ -301,6 +302,7 @@
         });
     });
 
+    {% if request.user.is_authenticated %}
     document.querySelectorAll('.favorite-form').forEach(form => {
         form.addEventListener('submit', function(e) {
             e.preventDefault();
@@ -365,5 +367,6 @@
             });
         }
     });
+    {% endif %}
 </script>
 {% endblock %}

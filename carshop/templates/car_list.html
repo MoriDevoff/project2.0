@@ -204,11 +204,11 @@
                     </button>
                     {% endif %}
                 </form>
+                {% endif %}
                 <div class="flex items-center favorite-count text-xs sm:text-sm" style="color: var(--secondary-color);">
                     <i class="fas fa-heart mr-1"></i>
                     <span>{{ car.favorite_count }} человек</span>
                 </div>
-                {% endif %}
             </div>
         </div>
         {% endfor %}
@@ -309,6 +309,7 @@
             }
         });
 
+        {% if request.user.is_authenticated %}
         document.querySelectorAll('.favorite-form').forEach(form => {
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
@@ -341,6 +342,7 @@
                 });
             });
         });
+        {% endif %}
     });
 </script>
 {% endblock %}
