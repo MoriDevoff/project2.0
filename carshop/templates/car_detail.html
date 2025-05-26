@@ -12,9 +12,9 @@
     </div>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         <div class="relative">
-            {% if car.carphoto_set.exists %}
+            {% if photos|length > 0 %}
             <div id="carousel-{{ car.id }}" class="carousel-container">
-                {% for photo in car.carphoto_set.all %}
+                {% for photo in photos %}
                 <img src="{{ photo.get_photo }}" alt="{{ car.brand }} {{ car.model }}" class="carousel-image {% if forloop.first %}active{% endif %}" data-url="{{ photo.get_photo }}">
                 {% endfor %}
                 <button onclick="prevImage('{{ car.id }}')" class="carousel-button left" aria-label="Предыдущее изображение">
@@ -25,7 +25,7 @@
                 </button>
             </div>
             <div class="flex overflow-x-auto space-x-2 mt-2">
-                {% for photo in car.carphoto_set.all %}
+                {% for photo in photos %}
                 <img src="{{ photo.get_photo }}" alt="Thumbnail" class="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg cursor-pointer" onclick="swapMainImage('{{ car.id }}', '{{ photo.get_photo }}')">
                 {% endfor %}
             </div>
@@ -42,19 +42,16 @@
                     <td class="pr-2 sm:pr-4 py-1 border-b" style="color: var(--secondary-color); border-color: var(--border-color);">Двигатель</td>
                     <td class="py-1 border-b" style="border-color: var(--border-color);">{{ car.fuel_type }}, {{ car.engine_capacity }} л</td>
                 </tr>
-                {% with spec=car.carspecification %}
                 {% if spec %}
                 <tr>
                     <td class="pr-2 sm:pr-4 py-1 border-b" style="color: var(--secondary-color); border-color: var(--border-color);">Мощность</td>
                     <td class="py-1 border-b" style="border-color: var(--border-color);">{{ spec.power|default:"-" }} л.с.</td>
                 </tr>
                 {% endif %}
-                {% endwith %}
                 <tr>
                     <td class="pr-2 sm:pr-4 py-1 border-b" style="color: var(--secondary-color); border-color: var(--border-color);">Коробка передач</td>
                     <td class="py-1 border-b" style="border-color: var(--border-color);">{{ car.transmission }}</td>
                 </tr>
-                {% with spec=car.carspecification %}
                 {% if spec %}
                 <tr>
                     <td class="pr-2 sm:pr-4 py-1 border-b" style="color: var(--secondary-color); border-color: var(--border-color);">Привод</td>
@@ -65,7 +62,6 @@
                     <td class="py-1 border-b" style="border-color: var(--border-color);">{{ spec.body_type|default:"-" }}</td>
                 </tr>
                 {% endif %}
-                {% endwith %}
                 <tr>
                     <td class="pr-2 sm:pr-4 py-1 border-b" style="color: var(--secondary-color); border-color: var(--border-color);">Цвет</td>
                     <td class="py-1 border-b" style="border-color: var(--border-color);">{{ car.color|default:"-" }}</td>
@@ -74,7 +70,6 @@
                     <td class="pr-2 sm:pr-4 py-1 border-b" style="color: var(--secondary-color); border-color: var(--border-color);">Пробег</td>
                     <td class="py-1 border-b" style="border-color: var(--border-color);">{{ car.mileage }} км</td>
                 </tr>
-                {% with spec=car.carspecification %}
                 {% if spec %}
                 <tr>
                     <td class="pr-2 sm:pr-4 py-1 border-b" style="color: var(--secondary-color); border-color: var(--border-color);">VIN</td>
@@ -89,7 +84,6 @@
                     <td class="py-1 border-b" style="border-color: var(--border-color);">{{ spec.country_of_origin|default:"-" }}</td>
                 </tr>
                 {% endif %}
-                {% endwith %}
                 </tbody>
             </table>
             <p class="text-base sm:text-lg md:text-xl font-bold" style="color: var(--highlight-color);">{{ car.price }} ₽</p>

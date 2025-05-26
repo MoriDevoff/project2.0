@@ -10,6 +10,7 @@ from django.db.models import Q, Count
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.cache import never_cache
+from django.core.cache import cache
 from .forms import RegistrationForm, CarForm, UserProfileForm, PurchaseForm, PasswordResetForm, SetPasswordForm, ManageBalanceForm, ManageUserForm, CarSpecificationForm
 from .models import User, Car, CarPhoto, PurchaseRequest, EmailVerification, PriceHistory, Favorite, CarSpecification
 from datetime import timedelta
@@ -32,15 +33,13 @@ def get_unread_deals_count(user):
 
 def car_list(request):
     cars = Car.objects.filter(is_sold=False).annotate(favorite_count=Count('favorites'))
-    unread_deals_count = get_unread_deals_count(request.user) if request.user.is_authenticated else 0
-
     if request.user.is_authenticated:
         for car in cars:
             car.is_favorited = Favorite.objects.filter(car=car, user=request.user).exists()
     else:
         for car in cars:
             car.is_favorited = False
-
+    unread_deals_count = get_unread_deals_count(request.user) if request.user.is_authenticated else 0
     return render(request, 'car_list.html', {
         'cars': cars,
         'unread_deals_count': unread_deals_count
@@ -132,6 +131,27 @@ def car_detail(request, car_id):
     else:
         car.is_favorited = False
 
+    # Кэширование фото
+    cache_key_photos = f'car_photos_{car_id}'
+    cached_photos = cache.get(cache_key_photos)
+    if cached_photos is None:
+        photos = list(car.carphoto_set.all())
+        cache.set(cache_key_photos, photos, timeout=3600)  # Кэш на 1 час
+    else:
+        photos = cached_photos
+
+    # Кэширование характеристик
+    cache_key_spec = f'car_specification_{car_id}'
+    cached_spec = cache.get(cache_key_spec)
+    if cached_spec is None:
+        try:
+            spec = car.carspecification
+            cache.set(cache_key_spec, spec, timeout=3600)  # Кэш на 1 час
+        except CarSpecification.DoesNotExist:
+            spec = None
+    else:
+        spec = cached_spec
+
     price_history = PriceHistory.objects.filter(car=car).order_by('change_date')
     price_data = [
         {
@@ -157,12 +177,16 @@ def car_detail(request, car_id):
     price_data_json = json.dumps(price_data)
 
     unread_deals_count = get_unread_deals_count(request.user) if request.user.is_authenticated else 0
+    current_timestamp = int(timezone.now().timestamp())
 
     return render(request, 'car_detail.html', {
         'car': car,
         'author': car.user,
+        'photos': photos,
+        'spec': spec,
         'price_data_json': price_data_json,
-        'unread_deals_count': unread_deals_count
+        'unread_deals_count': unread_deals_count,
+        'current_timestamp': current_timestamp
     })
 
 @never_cache
@@ -174,7 +198,6 @@ def register(request):
             user.date_joined = timezone.now()
             user.avatar_url = 'https://avatars.mds.yandex.net/i?id=e54ae3f787cf29aa21be07d6762ecc0dfaa02fa2-5014002-images-thumbs&n=13'
             user.save()
-
             if not user.is_superuser:
                 expiration_date = timezone.now() + timedelta(days=settings.ACCOUNT_ACTIVATION_DAYS)
                 verification = EmailVerification.objects.create(
@@ -211,21 +234,6 @@ def register(request):
     else:
         form = RegistrationForm()
     return render(request, 'register.html', {'form': form})
-
-@never_cache
-def verify_email(request, token):
-    try:
-        verification = EmailVerification.objects.get(token=token, is_used=False, expiration_date__gt=timezone.now())
-        user = verification.user
-        user.is_verified = True
-        user.save()
-        verification.is_used = True
-        verification.save()
-        messages.success(request, 'Ваш email успешно подтвержден! Теперь вы можете войти.')
-        return redirect('login')
-    except EmailVerification.DoesNotExist:
-        messages.error(request, 'Неверный или просроченный токен подтверждения.')
-        return redirect('register')
 
 @never_cache
 def login_view(request):
@@ -296,6 +304,10 @@ def create_car(request):
                 for url in photo_urls:
                     CarPhoto.objects.create(car=car, photo_url=url)
 
+            # Инвалидация кэша фото и характеристик после создания
+            cache.delete(f'car_photos_{car.id}')
+            cache.delete(f'car_specification_{car.id}')
+
             messages.success(request, 'Автомобиль успешно добавлен!')
             return redirect('car_list')
         else:
@@ -326,6 +338,7 @@ def create_car(request):
     })
 
 @login_required
+@never_cache
 def profile(request):
     user_cars = Car.objects.filter(user=request.user, is_sold=False)
     buyer_requests = PurchaseRequest.objects.filter(buyer=request.user).order_by('-request_date')
@@ -334,15 +347,31 @@ def profile(request):
     unread_sales_count = seller_requests.filter(is_read=False, status='В ожидании').count()
     has_new_notifications = (unread_purchases_count > 0 or unread_sales_count > 0)
     unread_deals_count = unread_purchases_count + unread_sales_count
+
+    # Кэширование данных профиля
+    cache_key_profile = f'profile_{request.user.id}'
+    cached_data = cache.get(cache_key_profile)
+    if cached_data is None:
+        profile_data = {
+            'user_cars': user_cars,
+            'buyer_requests': buyer_requests,
+            'seller_requests': seller_requests,
+            'unread_deals_count': unread_deals_count,
+            'has_new_notifications': has_new_notifications,
+        }
+        cache.set(cache_key_profile, profile_data, timeout=3600)  # Кэш на 1 час
+    else:
+        profile_data = cached_data
+
     return render(request, 'profile.html', {
         'user': request.user,
-        'user_cars': user_cars,
-        'buyer_requests': buyer_requests,
-        'seller_requests': seller_requests,
-        'unread_deals_count': unread_deals_count,
+        'user_cars': profile_data['user_cars'],
+        'buyer_requests': profile_data['buyer_requests'],
+        'seller_requests': profile_data['seller_requests'],
+        'unread_deals_count': profile_data['unread_deals_count'],
         'unread_purchases_count': unread_purchases_count,
         'unread_sales_count': unread_sales_count,
-        'has_new_notifications': has_new_notifications,
+        'has_new_notifications': profile_data['has_new_notifications'],
     })
 
 @login_required
@@ -352,6 +381,9 @@ def purchases(request):
     seller_requests = PurchaseRequest.objects.filter(seller=request.user).order_by('-request_date')
     buyer_requests.filter(is_read=False, status__in=['Одобрено', 'Отклонено']).update(is_read=True)
     seller_requests.filter(is_read=False, status='В ожидании').update(is_read=True)
+    # Инвалидация кэша профиля после обновления уведомлений
+    cache.delete(f'profile_{request.user.id}')
+
     unread_purchases_count = buyer_requests.filter(is_read=False, status__in=['Одобрено', 'Отклонено']).count()
     unread_sales_count = seller_requests.filter(is_read=False, status='В ожидании').count()
     has_new_notifications = (unread_purchases_count > 0 or unread_sales_count > 0)
@@ -373,6 +405,8 @@ def reset_notifications(request):
     if request.method == 'POST':
         PurchaseRequest.objects.filter(buyer=request.user, is_read=False, status__in=['Одобрено', 'Отклонено']).update(is_read=True)
         PurchaseRequest.objects.filter(seller=request.user, is_read=False, status='В ожидании').update(is_read=True)
+        # Инвалидация кэша профиля после сброса уведомлений
+        cache.delete(f'profile_{request.user.id}')
         messages.success(request, 'Все уведомления сброшены.')
         return redirect('profile')
     return redirect('profile')
@@ -433,6 +467,9 @@ def respond_purchase(request, purchase_id, action):
         purchase.car.save()
         purchase.is_read = False
         purchase.save()
+        # Инвалидация кэша фото и характеристик после продажи
+        cache.delete(f'car_photos_{purchase.car.id}')
+        cache.delete(f'car_specification_{purchase.car.id}')
         messages.success(request, f'Заявка одобрена. Автомобиль продан за {purchase.final_price} ₽.')
     elif action == 'reject':
         purchase.status = 'Отклонено'
@@ -458,6 +495,8 @@ def edit_profile(request):
                 user.set_password(password)
             user.save()
             update_session_auth_hash(request, user)
+            # Инвалидация кэша профиля после редактирования
+            cache.delete(f'profile_{request.user.id}')
             messages.success(request, 'Профиль успешно обновлён!')
             return redirect('profile')
     else:
@@ -498,7 +537,8 @@ def edit_car(request, car_id):
                         car=car,
                         old_price=old_price,
                         new_price=car.price,
-                        change_date=timezone.now()
+                        change_date=timezone.now(),
+                        changed_by_user=request.user
                     )
                 spec = spec_form.save(commit=False)
                 spec.car = car
@@ -521,6 +561,10 @@ def edit_car(request, car_id):
                 photo_files = form.cleaned_data.get('photo_files_list', [])
                 for photo_file in photo_files:
                     CarPhoto.objects.create(car=car, photo_file=photo_file)
+
+            # Инвалидация кэша фото и характеристик после редактирования
+            cache.delete(f'car_photos_{car.id}')
+            cache.delete(f'car_specification_{car.id}')
 
             messages.success(request, 'Объявление успешно обновлено!')
             return redirect('car_detail', car_id=car.id)
@@ -561,6 +605,9 @@ def delete_car(request, car_id):
             return JsonResponse({'success': False, 'error': 'У вас нет прав для удаления этого объявления'}, status=403)
 
         car.delete()
+        # Инвалидация кэша фото и характеристик после удаления
+        cache.delete(f'car_photos_{car_id}')
+        cache.delete(f'car_specification_{car_id}')
         logger.info(f"Объявление {car_id} успешно удалено пользователем {request.user}")
         return JsonResponse({'success': True})
 
@@ -614,6 +661,8 @@ def password_reset_confirm(request, token):
                 user.save()
                 verification.is_used = True
                 verification.save()
+                # Инвалидация кэша профиля после смены пароля
+                cache.delete(f'profile_{user.id}')
                 messages.success(request, 'Пароль успешно изменен. Теперь вы можете войти.')
                 return redirect('login')
         else:
@@ -649,7 +698,6 @@ def toggle_favorite(request, car_id):
 def favorite_list(request):
     favorites = Favorite.objects.filter(user=request.user).order_by('-added_date')
     unread_deals_count = get_unread_deals_count(request.user)
-
     return render(request, 'favorite_list.html', {
         'favorites': favorites,
         'unread_deals_count': unread_deals_count
@@ -678,13 +726,12 @@ def manage_users(request):
                 user.is_active = False
                 user.block_reason = reason
                 user.save()
-                messages.success(request, f'Пользователь {user.username} заблокирован. Причина: {reason}')
             elif action == 'unblock':
                 user.is_active = True
                 user.block_reason = ''
                 user.save()
-                messages.success(request, f'Пользователь {user.username} разблокирован')
             elif action == 'delete':
+                user_id = user.id
                 user.delete()
                 messages.success(request, f'Пользователь {user.username} удалён')
             return redirect('manage_users')
@@ -718,10 +765,17 @@ def manage_ads(request):
                 form = CarForm(request.POST, request.FILES, instance=car)
                 if form.is_valid():
                     form.save()
+                    # Инвалидация кэша фото и характеристик после редактирования
+                    cache.delete(f'car_photos_{car.id}')
+                    cache.delete(f'car_specification_{car.id}')
                     messages.success(request, f'Объявление {car.brand} {car.model} обновлено')
                     return redirect('manage_ads')
             elif action == 'delete':
+                car_id = car.id
                 car.delete()
+                # Инвалидация кэша фото и характеристик после удаления
+                cache.delete(f'car_photos_{car_id}')
+                cache.delete(f'car_specification_{car_id}')
                 messages.success(request, f'Объявление {car.brand} {car.model} удалено')
     unread_deals_count = get_unread_deals_count(request.user)
     return render(request, 'manage_ads.html', {
@@ -756,6 +810,8 @@ def manage_balances(request):
                     messages.error(request, 'Недостаточно средств для списания')
                     return render(request, 'manage_balances.html', {'users': users, 'form': form})
             user.save()
+            # Инвалидация кэша профиля после изменения баланса
+            cache.delete(f'profile_{user.id}')
             return redirect('manage_balances')
     else:
         form = ManageBalanceForm()
@@ -774,3 +830,20 @@ def check_email_availability(request):
     email = request.POST.get('email', '').strip()
     exists = User.objects.filter(email=email).exists()
     return JsonResponse({'exists': exists, 'email': email})
+
+@never_cache
+def verify_email(request, token):
+    try:
+        verification = EmailVerification.objects.get(token=token, is_used=False, expiration_date__gt=timezone.now())
+        user = verification.user
+        user.is_verified = True
+        user.save()
+        verification.is_used = True
+        verification.save()
+        # Инвалидация кэша профиля после подтверждения email
+        cache.delete(f'profile_{user.id}')
+        messages.success(request, 'Ваш email успешно подтвержден! Теперь вы можете войти.')
+        return redirect('login')
+    except EmailVerification.DoesNotExist:
+        messages.error(request, 'Неверный или просроченный токен подтверждения.')
+        return redirect('register')

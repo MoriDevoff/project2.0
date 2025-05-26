@@ -12,45 +12,30 @@
     {% endif %}
     <form method="post" enctype="multipart/form-data" class="space-y-4">
         {% csrf_token %}
-        {% if form.errors %}
-        <div class="mb-4 p-3 rounded text-center text-sm sm:text-base" style="background-color: var(--error-bg); color: var(--error-color);">
-            {% for field, errors in form.errors.items %}
-            {% for error in errors %}
-            {{ error }}<br>
-            {% endfor %}
-            {% endfor %}
-        </div>
-        {% endif %}
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {% for field in form %}
             <div>
                 <label for="{{ field.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ field.label }}</label>
                 {{ field }}
-                {% if field.errors %}
-                <span class="text-xs sm:text-sm" style="color: var(--error-color);">{{ field.errors }}</span>
-                {% endif %}
             </div>
             {% endfor %}
         </div>
-        <div class="flex flex-col gap-6 items-center">  <!-- Центрирование по горизонтали -->
-            <!-- Кнопка "Сохранить изменения" -->
+        <div class="flex flex-col gap-6 items-center">
             <button type="submit"
                     class="w-full max-w-xs px-4 sm:px-5 py-2 sm:py-3 rounded-lg text-sm sm:text-base border border-black hover:opacity-90 transition-all cursor-pointer text-center"
                     style="background-color: var(--btn-bg); color: var(--btn-text);">
-        <span class="flex items-center justify-center">  <!-- Центрирование содержимого -->
-            <span>Сохранить изменения</span>
-            <i class="fas fa-save ml-2"></i>
-        </span>
+                <span class="flex items-center justify-center">
+                    <span>Сохранить изменения</span>
+                    <i class="fas fa-save ml-2"></i>
+                </span>
             </button>
-
-            <!-- Кнопка "Вернуться к профилю" -->
             <a href="{% url 'profile' %}"
                class="w-full max-w-xs px-4 sm:px-5 py-2 sm:py-3 rounded-lg text-sm sm:text-base border border-black hover:opacity-90 transition-all cursor-pointer text-center"
                style="background-color: #6b7280; color: white;">
-        <span class="flex items-center justify-center">  <!-- Центрирование содержимого -->
-            <span>Вернуться к профилю</span>
-            <i class="fas fa-arrow-left ml-2"></i>
-        </span>
+                <span class="flex items-center justify-center">
+                    <span>Вернуться к профилю</span>
+                    <i class="fas fa-arrow-left ml-2"></i>
+                </span>
             </a>
         </div>
     </form>

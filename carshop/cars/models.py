@@ -5,7 +5,6 @@ from django.utils import timezone
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils.translation import gettext_lazy as _
 import uuid
-from django.core.cache import cache
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, email, password, phone=None, **extra_fields):
@@ -225,44 +224,3 @@ class EmailVerification(models.Model):
 
     def __str__(self):
         return f"Verification for {self.user.username}"
-
-# Сигналы для инвалидации кеша
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
-
-@receiver(post_save, sender=Car)
-@receiver(post_delete, sender=Car)
-def clear_car_cache(sender, instance, **kwargs):
-    try:
-        cache.delete_pattern('carshop_*')
-        cache.delete_pattern(f'car_detail_{instance.id}_*')
-    except AttributeError:
-        pass  # Игнорируем, если cache не поддерживает delete_pattern
-
-@receiver(post_save, sender=User)
-@receiver(post_delete, sender=User)
-def clear_user_cache(sender, instance, **kwargs):
-    try:
-        cache.delete_pattern(f'profile_{instance.id}_*')
-        cache.delete_pattern('unread_deals_count_*')
-    except AttributeError:
-        pass  # Игнорируем, если cache не поддерживает delete_pattern
-
-@receiver(post_save, sender=Favorite)
-@receiver(post_delete, sender=Favorite)
-def clear_favorite_cache(sender, instance, **kwargs):
-    try:
-        cache.delete_pattern(f'favorite_list_{instance.user.id}_*')
-        cache.delete_pattern(f'car_detail_{instance.car.id}_*')
-    except AttributeError:
-        pass  # Игнорируем, если cache не поддерживает delete_pattern
-
-@receiver(post_save, sender=PurchaseRequest)
-@receiver(post_delete, sender=PurchaseRequest)
-def clear_purchase_cache(sender, instance, **kwargs):
-    try:
-        cache.delete_pattern(f'profile_{instance.buyer.id}_*')
-        cache.delete_pattern(f'profile_{instance.seller.id}_*')
-        cache.delete_pattern('unread_deals_count_*')
-    except AttributeError:
-        pass  # Игнорируем, если cache не поддерживает delete_pattern
