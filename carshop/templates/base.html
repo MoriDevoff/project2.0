@@ -663,7 +663,11 @@
         <h3>Быстрые действия</h3>
         <ul>
             <li><a href="{% url 'car_list' %}">Список автомобилей</a></li>
-            <li><a href="{% url 'profile' %}">Профиль</a></li>
+            <li><a href="{% url 'profile' %}">Профиль
+                {% if unread_deals_count and unread_deals_count > 0 %}
+                <span class="badge" style="background-color: var(--error-color); color: var(--btn-text); margin-left: 6px; padding: 2px 8px; border-radius: 12px; font-size: 0.85em;">{{ unread_deals_count }}</span>
+                {% endif %}
+            </a></li>
             <li><a href="{% url 'create_car' %}">Добавить автомобиль</a></li>
             <li><a href="{% url 'favorite_list' %}">Избранное</a></li>
         </ul>

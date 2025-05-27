@@ -470,6 +470,9 @@ def purchase_car(request, car_id):
             purchase_request.seller = car.user
             purchase_request.is_read = False
             purchase_request.save()
+            # Сброс кэша профиля для покупателя и продавца
+            cache.delete(f'profile_{request.user.id}')
+            cache.delete(f'profile_{car.user.id}')
             messages.success(request, 'Заявка на покупку отправлена продавцу!')
             return JsonResponse({'status': 'success', 'message': 'Заявка на покупку отправлена!'})
         return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
@@ -504,11 +507,17 @@ def respond_purchase(request, purchase_id, action):
         # Инвалидация кэша фото и характеристик после продажи
         cache.delete(f'car_photos_{purchase.car.id}')
         cache.delete(f'car_specification_{purchase.car.id}')
+        # Сброс кэша профиля для покупателя и продавца
+        cache.delete(f'profile_{purchase.buyer.id}')
+        cache.delete(f'profile_{purchase.seller.id}')
         messages.success(request, f'Заявка одобрена. Автомобиль продан за {purchase.final_price} ₽.')
     elif action == 'reject':
         purchase.status = 'Отклонено'
         purchase.is_read = False
         purchase.save()
+        # Сброс кэша профиля для покупателя и продавца
+        cache.delete(f'profile_{purchase.buyer.id}')
+        cache.delete(f'profile_{purchase.seller.id}')
         messages.success(request, 'Заявка отклонена.')
     else:
         messages.error(request, 'Недопустимое действие.')

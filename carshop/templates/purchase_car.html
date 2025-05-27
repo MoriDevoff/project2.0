@@ -54,6 +54,7 @@
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
                     'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
                 body: new URLSearchParams(formData).toString()
             })

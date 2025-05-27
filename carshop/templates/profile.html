@@ -113,8 +113,14 @@
                         <p class="text-sm sm:text-base" style="color: var(--secondary-color);">Дата заявки: {{ request.request_date|date:"d.m.Y H:i" }}</p>
                         {% if request.status == 'В ожидании' %}
                         <div class="mt-2">
-                            <a href="{% url 'respond_purchase' request.id 'accept' %}" class="text-sm sm:text-base" style="color: var(--success-color);">Одобрить</a>
-                            <a href="{% url 'respond_purchase' request.id 'reject' %}" class="ml-2 sm:ml-4 text-sm sm:text-base" style="color: var(--error-color);">Отклонить</a>
+                            <a href="{% url 'respond_purchase' request.id 'accept' %}" 
+                                class="inline-block px-3 sm:px-4 py-1 sm:py-2 rounded-lg border border-black bg-green-500 hover:bg-green-600 text-white text-sm sm:text-base transition-colors">
+                                Одобрить
+                            </a>
+                            <a href="{% url 'respond_purchase' request.id 'reject' %}" 
+                                class="inline-block px-3 sm:px-4 py-1 sm:py-2 rounded-lg border border-black bg-red-500 hover:bg-red-600 text-white text-sm sm:text-base transition-colors ml-2 sm:ml-4">
+                                Отклонить
+                            </a>
                         </div>
                         {% endif %}
                     </div>
