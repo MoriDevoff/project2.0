@@ -35,6 +35,12 @@ class RegistrationForm(forms.ModelForm):
             raise ValidationError(error)
         return password
 
+    def clean_phone(self):
+        phone = self.cleaned_data.get('phone')
+        if phone and (not phone.isdigit() or len(phone) != 11):
+            raise ValidationError('Телефон должен содержать ровно 11 цифр.')
+        return phone
+
     def clean(self):
         cleaned_data = super().clean()
         password = cleaned_data.get('password')
@@ -140,6 +146,11 @@ class UserProfileForm(forms.ModelForm):
     )
     password = forms.CharField(widget=forms.PasswordInput, label='Новый пароль', required=False)
     confirm_password = forms.CharField(widget=forms.PasswordInput, label='Подтверждение пароля', required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['avatar_url'].widget.attrs['autocomplete'] = 'off'
+        self.fields['password'].widget.attrs['autocomplete'] = 'off'
 
     class Meta:
         model = User

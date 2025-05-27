@@ -13,12 +13,51 @@
     <form method="post" enctype="multipart/form-data" class="space-y-4">
         {% csrf_token %}
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {% for field in form %}
             <div>
-                <label for="{{ field.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ field.label }}</label>
-                {{ field }}
+                <label for="{{ form.first_name.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ form.first_name.label }}</label>
+                {{ form.first_name }}
             </div>
-            {% endfor %}
+            <div>
+                <label for="{{ form.last_name.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ form.last_name.label }}</label>
+                {{ form.last_name }}
+            </div>
+            <div>
+                <label for="{{ form.phone.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ form.phone.label }}</label>
+                {{ form.phone }}
+            </div>
+            <div>
+                <label for="{{ form.avatar_url.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ form.avatar_url.label }}</label>
+                {{ form.avatar_url }}
+            </div>
+            <div>
+                <label for="{{ form.password.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ form.password.label }}</label>
+                <div class="relative">
+                    {{ form.password }}
+                    <a type="button" id="togglePassword" class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer group" style="color: var(--secondary-color);">
+                        <svg id="eyeIconPassword" class="h-5 w-5 transition-all duration-200 group-hover:scale-110 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+            <div>
+                <label for="{{ form.confirm_password.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ form.confirm_password.label }}</label>
+                <div class="relative">
+                    {{ form.confirm_password }}
+                    <a type="button" id="toggleConfirmPassword" class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer group" style="color: var(--secondary-color);">
+                        <svg id="eyeIconConfirm" class="h-5 w-5 transition-all duration-200 group-hover:scale-110 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                    </a>
+                </div>
+                <span id="password-match-error" class="text-sm mt-1" style="color: var(--error-color);"></span>
+            </div>
+            <div class="sm:col-span-2">
+                <label for="{{ form.avatar_file.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ form.avatar_file.label }}</label>
+                {{ form.avatar_file }}
+            </div>
         </div>
         <div class="flex flex-col gap-6 items-center">
             <button type="submit"
@@ -45,5 +84,93 @@
     button[type="submit"]:hover, a[href="{% url 'profile' %}"]:hover {
         background-color: var(--btn-hover);
     }
+    .form-clear {
+        background: #e5e7eb !important;
+        border: 1px solid #000 !important;
+        color: #111827 !important;
+        border-radius: 0.375rem;
+        padding: 2px 8px;
+        font-size: 0.95em;
+        margin-left: 8px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .form-clear:hover {
+        background: #d1d5db !important;
+    }
 </style>
+<script>
+// Добавляем класс form-clear для кнопки очистки файла
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.form-clear, .clearablefileinput input[type="checkbox"]').forEach(function(el) {
+            el.classList.add('form-clear');
+        });
+        // Глазик для поля пароля
+        const passwordInput = document.getElementById('{{ form.password.id_for_label }}');
+        const togglePassword = document.getElementById('togglePassword');
+        const eyeIconPassword = document.getElementById('eyeIconPassword');
+        if (togglePassword && passwordInput) {
+            togglePassword.addEventListener('click', function () {
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    eyeIconPassword.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m3.858.223a3 3 0 114.243 4.243M3 3l18 18"></path>';
+                } else {
+                    passwordInput.type = 'password';
+                    eyeIconPassword.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268-2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
+                }
+            });
+        }
+        // Глазик для поля подтверждения пароля
+        const confirmInput = document.getElementById('{{ form.confirm_password.id_for_label }}');
+        const toggleConfirm = document.getElementById('toggleConfirmPassword');
+        const eyeIconConfirm = document.getElementById('eyeIconConfirm');
+        if (toggleConfirm && confirmInput) {
+            toggleConfirm.addEventListener('click', function () {
+                if (confirmInput.type === 'password') {
+                    confirmInput.type = 'text';
+                    eyeIconConfirm.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m3.858.223a3 3 0 114.243 4.243M3 3l18 18"></path>';
+                } else {
+                    confirmInput.type = 'password';
+                    eyeIconConfirm.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268-2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
+                }
+            });
+        }
+        // Асинхронная проверка совпадения паролей
+        const passwordMatchError = document.getElementById('password-match-error');
+        function checkPasswordsMatch() {
+            if (passwordInput.value && confirmInput.value && passwordInput.value !== confirmInput.value) {
+                passwordMatchError.textContent = 'Пароли не совпадают';
+            } else {
+                passwordMatchError.textContent = '';
+            }
+        }
+        if (passwordInput && confirmInput) {
+            passwordInput.addEventListener('input', checkPasswordsMatch);
+            confirmInput.addEventListener('input', checkPasswordsMatch);
+        }
+        // Проверка изменений формы перед отправкой
+        const form = document.querySelector('form');
+        if (form) {
+            const initialData = new FormData(form);
+            form.addEventListener('submit', function(e) {
+                const currentData = new FormData(form);
+                let changed = false;
+                for (let [key, value] of currentData.entries()) {
+                    if (initialData.get(key) !== value) {
+                        changed = true;
+                        break;
+                    }
+                }
+                if (!changed) {
+                    e.preventDefault();
+                    if (typeof showSticker === 'function') {
+                        showSticker('Вы не внесли никаких изменений', 'info', 5000);
+                    } else {
+                        alert('Вы не внесли никаких изменений');
+                    }
+                }
+            });
+        }
+    });
+</script>
 {% endblock %}

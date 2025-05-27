@@ -1,4 +1,13 @@
 document.addEventListener('DOMContentLoaded', function () {
+    // Добавляем стили для стикеров
+    const style = document.createElement('style');
+    style.textContent = `
+        .sticker {
+            border: 2px solid black;
+        }
+    `;
+    document.head.appendChild(style);
+
     // 1. Кнопка "Наверх"
     const scrollToTopBtn = document.createElement('button');
     scrollToTopBtn.innerHTML = '↑ Наверх';
@@ -41,9 +50,10 @@ document.addEventListener('DOMContentLoaded', function () {
         validateInput(input, emailRegex, 'Некорректный email! Пример: user@example.com');
     });
 
-    document.querySelectorAll('input[type="password"]').forEach(input => {
-        validateInput(input, passwordRegex, 'Пароль должен содержать минимум 8 символов, включая буквы и цифры!');
-    });
+    const passwordInput = document.getElementById('id_password');
+    if (passwordInput) {
+        validateInput(passwordInput, passwordRegex, 'Пароль должен содержать минимум 8 символов, включая буквы и цифры!');
+    }
 
     // 3. Динамическое обновление навигации
     function updateNavigation() {
@@ -69,4 +79,14 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     // 4. Обновление навигации при загрузке
     updateNavigation();
+
+    // 5. Показываем стикер при необходимости подтверждения email
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('verify_email') === '1') {
+        if (typeof showSticker === 'function') {
+            showSticker('Подтвердите свой Email для входа', 'info', 7000);
+        } else {
+            alert('Подтвердите свой Email для входа');
+        }
+    }
 });

@@ -17,6 +17,34 @@
             {{ spec_form.non_field_errors }}
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                {# Сначала нужные поля из spec_form #}
+                {% for field in spec_form.visible_fields %}
+                    {% if field.name == "brand" or field.name == "model" or field.name == "year" or field.name == "price" or field.name == "mileage" or field.name == "engine_capacity" %}
+                    <div>
+                        <label for="{{ field.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                        <div class="text-xs sm:text-sm mt-1" style="color: var(--error-color);">{{ field.errors }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                {# Остальные поля из spec_form #}
+                {% for field in spec_form.visible_fields %}
+                    {% if field.name != "brand" and field.name != "model" and field.name != "year" and field.name != "price" and field.name != "mileage" and field.name != "engine_capacity" %}
+                    <div>
+                        <label for="{{ field.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                        <div class="text-xs sm:text-sm mt-1" style="color: var(--error-color);">{{ field.errors }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+                {# Основные поля формы #}
                 {% for field in form.visible_fields %}
                 <div>
                     <label for="{{ field.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ field.label }}</label>
@@ -26,21 +54,6 @@
                     {% endif %}
                 </div>
                 {% endfor %}
-            </div>
-
-            <div class="mt-6 sm:mt-8">
-                <h3 class="text-lg sm:text-xl font-semibold mb-4" style="color: var(--secondary-color);">Характеристики</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    {% for field in spec_form.visible_fields %}
-                    <div>
-                        <label for="{{ field.id_for_label }}" class="block text-sm sm:text-base font-medium mb-1" style="color: var(--secondary-color);">{{ field.label }}</label>
-                        {{ field }}
-                        {% if field.errors %}
-                        <div class="text-xs sm:text-sm mt-1" style="color: var(--error-color);">{{ field.errors }}</div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                </div>
             </div>
 
             <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mt-6 sm:mt-8 justify-center">

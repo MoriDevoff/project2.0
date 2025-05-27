@@ -49,14 +49,14 @@
             <p class="text-sm mt-1" style="color: var(--error-color);">{{ form.password.errors.as_text }}</p>
             {% endif %}
         </div>
-        <div class="relative">
-            <label class="block font-medium text-sm md:text-base" style="color: var(--secondary-color);">{{ form.confirm_password.label }}</label>
-            {{ form.confirm_password }}
-            <span id="confirm-password-error" class="text-sm" style="color: var(--error-color);"></span>
-            {% if form.confirm_password.errors %}
-            <p class="text-sm mt-1" style="color: var(--error-color);">{{ form.confirm_password.errors.as_text }}</p>
-            {% endif %}
-        </div>
+            <div class="relative">
+                <label class="block font-medium text-sm md:text-base" style="color: var(--secondary-color);">{{ form.confirm_password.label }}</label>
+                {{ form.confirm_password }}
+                <span id="confirm-password-error" class="text-sm" style="color: var(--error-color);"></span>
+                {% if form.confirm_password.errors %}
+                <p class="text-sm mt-1" style="color: var(--error-color);">{{ form.confirm_password.errors.as_text }}</p>
+                {% endif %}
+            </div>
         {% if form.non_field_errors %}
         <div class="text-sm mt-1" style="color: var(--error-color);">
             {{ form.non_field_errors.as_text }}

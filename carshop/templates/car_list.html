@@ -39,15 +39,13 @@
 
     <div id="filtersPanel" class="mb-4 rounded-lg shadow-md p-4 hidden" style="background-color: var(--card-bg);">
         <form method="get" action="{% url 'car_search' %}" class="search-form grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-            <select name="condition" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
-                <option value="">Все состояния</option>
-                <option value="new" {% if request.GET.condition == "new" %}selected{% endif %}>Новый</option>
-                <option value="used" {% if request.GET.condition == "used" %}selected{% endif %}>Б/у</option>
-            </select>
-            <input type="number" name="price_min" placeholder="Мин. цена (₽)" value="{{ request.GET.price_min }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);" min="0">
-            <input type="number" name="price_max" placeholder="Макс. цена (₽)" value="{{ request.GET.price_max }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);" min="0">
-            <input type="number" name="mileage_min" placeholder="Мин. пробег (км)" value="{{ request.GET.mileage_min }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);" min="0">
-            <input type="number" name="mileage_max" placeholder="Макс. пробег (км)" value="{{ request.GET.mileage_max }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);" min="0">
+            <input type="text" name="year" placeholder="Год выпуска" value="{{ request.GET.year }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
+            <input type="text" name="price_min" placeholder="Мин. цена (₽)" value="{{ request.GET.price_min }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
+            <input type="text" name="price_max" placeholder="Макс. цена (₽)" value="{{ request.GET.price_max }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
+            <input type="text" name="mileage_min" placeholder="Мин. пробег (км)" value="{{ request.GET.mileage_min }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
+            <input type="text" name="mileage_max" placeholder="Макс. пробег (км)" value="{{ request.GET.mileage_max }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
+            <input type="text" name="engine_capacity_min" placeholder="Мин. объём (л)" value="{{ request.GET.engine_capacity_min }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
+            <input type="text" name="engine_capacity_max" placeholder="Макс. объём (л)" value="{{ request.GET.engine_capacity_max }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
             <select name="fuel_type" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
                 <option value="">Все типы топлива</option>
                 <option value="Бензин" {% if request.GET.fuel_type == "Бензин" %}selected{% endif %}>Бензин</option>
@@ -63,16 +61,12 @@
                 <option value="Робот" {% if request.GET.transmission == "Робот" %}selected{% endif %}>Робот</option>
                 <option value="Вариатор" {% if request.GET.transmission == "Вариатор" %}selected{% endif %}>Вариатор</option>
             </select>
-            <select name="color" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
-                <option value="">Все цвета</option>
-                <option value="Белый" {% if request.GET.color == "Белый" %}selected{% endif %}>Белый</option>
-                <option value="Чёрный" {% if request.GET.color == "Чёрный" %}selected{% endif %}>Чёрный</option>
-                <option value="Серебристый" {% if request.GET.color == "Серебристый" %}selected{% endif %}>Серебристый</option>
-                <option value="Синий" {% if request.GET.color == "Синий" %}selected{% endif %}>Синий</option>
-                <option value="Красный" {% if request.GET.color == "Красный" %}selected{% endif %}>Красный</option>
+            <input type="text" name="color" placeholder="Цвет" value="{{ request.GET.color }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
+            <select name="condition" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
+                <option value="">Все состояния</option>
+                <option value="new" {% if request.GET.condition == "new" %}selected{% endif %}>Новый</option>
+                <option value="used" {% if request.GET.condition == "used" %}selected{% endif %}>Б/у</option>
             </select>
-            <input type="number" name="engine_capacity_min" placeholder="Mин. объём (л)" step="0.1" value="{{ request.GET.engine_capacity_min }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);" min="0" max="10">
-            <input type="number" name="engine_capacity_max" placeholder="Mакс. объём (л)" step="0.1" value="{{ request.GET.engine_capacity_max }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);" min="0" max="10">
             <select name="body_type" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
                 <option value="">Все типы кузова</option>
                 <option value="Седан" {% if request.GET.body_type == "Седан" %}selected{% endif %}>Седан</option>
@@ -80,82 +74,83 @@
                 <option value="Внедорожник" {% if request.GET.body_type == "Внедорожник" %}selected{% endif %}>Внедорожник</option>
                 <option value="Универсал" {% if request.GET.body_type == "Универсал" %}selected{% endif %}>Универсал</option>
                 <option value="Купе" {% if request.GET.body_type == "Купе" %}selected{% endif %}>Купе</option>
+                <option value="Кабриолет" {% if request.GET.body_type == "Кабриолет" %}selected{% endif %}>Кабриолет</option>
+                <option value="Минивэн" {% if request.GET.body_type == "Минивэн" %}selected{% endif %}>Минивэн</option>
+                <option value="Пикап" {% if request.GET.body_type == "Пикап" %}selected{% endif %}>Пикап</option>
             </select>
+            <input type="text" name="power_min" placeholder="Мин. мощность (л.с.)" value="{{ request.GET.power_min }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
+            <input type="text" name="power_max" placeholder="Макс. мощность (л.с.)" value="{{ request.GET.power_max }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
             <select name="drive_type" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
                 <option value="">Все типы привода</option>
                 <option value="Передний" {% if request.GET.drive_type == "Передний" %}selected{% endif %}>Передний</option>
                 <option value="Задний" {% if request.GET.drive_type == "Задний" %}selected{% endif %}>Задний</option>
-                <option value="Полный" {% if request.GET.drive_type == "Полный" %}selected{% endif %}>Полный</option>
+                <option value="4WD" {% if request.GET.drive_type == "4WD" %}selected{% endif %}>4WD</option>
+                <option value="AWD" {% if request.GET.drive_type == "AWD" %}selected{% endif %}>AWD</option>
             </select>
-            <select name="steering_wheel" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
-                <option value="">Положение руля</option>
-                <option value="Левый" {% if request.GET.steering_wheel == "Левый" %}selected{% endif %}>Левый</option>
-                <option value="Правый" {% if request.GET.steering_wheel == "Правый" %}selected{% endif %}>Правый</option>
-            </select>
-            <button type="submit" class="px-4 py-2 rounded col-span-full sm:col-span-2 md:col-span-3 lg:col-span-4 mt-2">Применить</button>
+            <input type="text" name="weight_min" placeholder="Мин. масса (кг)" value="{{ request.GET.weight_min }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
+            <input type="text" name="weight_max" placeholder="Макс. масса (кг)" value="{{ request.GET.weight_max }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
+            <input type="text" name="country_of_origin" placeholder="Страна производитель" value="{{ request.GET.country_of_origin }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
+            <input type="text" name="vin" placeholder="VIN" value="{{ request.GET.vin }}" class="w-full p-2 border rounded-lg" style="border-color: var(--border-color); background-color: var(--input-bg); color: var(--input-text);">
+            <button type="submit" class="px-4 py-2 rounded col-span-full sm:col-span-2 md:col-span-3 lg:col-span-4 mt-2 text-white !important" style="color: white !important;">
+                Применить
+            </button>
         </form>
     </div>
 
-    {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max or request.GET.fuel_type or request.GET.transmission or request.GET.color or request.GET.engine_capacity_min or request.GET.engine_capacity_max or request.GET.body_type or request.GET.drive_type or request.GET.steering_wheel %}
+    {% if request.GET and not request.GET.page %}
     <div class="mb-4 p-3 rounded text-center text-sm md:text-base" style="background-color: var(--message-bg); color: var(--message-text);">
         Применённые фильтры:
-        {% if request.GET.q %}
-        Название: "{{ request.GET.q }}"
+        {% for key, value in request.GET.items %}
+        {% if key != 'page' and key != 'csrfmiddlewaretoken' and value %}
+        {% if key == 'q' %}
+        Название: "{{ value }}"
+        {% elif key == 'year' %}
+        Год выпуска: {{ value }}
+        {% elif key == 'condition' %}
+        Состояние: {% if value == "new" %}Новый{% else %}Б/у{% endif %}
+        {% elif key == 'fuel_type' %}
+        Тип топлива: {{ value }}
+        {% elif key == 'transmission' %}
+        Трансмиссия: {{ value }}
+        {% elif key == 'body_type' %}
+        Тип кузова: {{ value }}
+        {% elif key == 'drive_type' %}
+        Привод: {{ value }}
+        {% elif key == 'price_min' %}
+        Мин. цена: {{ value }} ₽
+        {% elif key == 'price_max' %}
+        Макс. цена: {{ value }} ₽
+        {% elif key == 'mileage_min' %}
+        Мин. пробег: {{ value }} км
+        {% elif key == 'mileage_max' %}
+        Макс. пробег: {{ value }} км
+        {% elif key == 'engine_capacity_min' %}
+        Мин. объём: {{ value }} л
+        {% elif key == 'engine_capacity_max' %}
+        Макс. объём: {{ value }} л
+        {% elif key == 'power_min' %}
+        Мин. мощность: {{ value }} л.с.
+        {% elif key == 'power_max' %}
+        Макс. мощность: {{ value }} л.с.
+        {% elif key == 'weight_min' %}
+        Мин. масса: {{ value }} кг
+        {% elif key == 'weight_max' %}
+        Макс. масса: {{ value }} кг
+        {% elif key == 'country_of_origin' %}
+        Страна: {{ value }}
+        {% elif key == 'vin' %}
+        VIN: {{ value }}
+        {% elif key == 'color' %}
+        Цвет: {{ value }}
         {% endif %}
-        {% if request.GET.condition %}
-        {% if request.GET.q %}, {% endif %}
-        Состояние:
-        {% if request.GET.condition == "new" %}Новый{% else %}Б/у{% endif %}
+        {% if not forloop.last %}, {% endif %}
         {% endif %}
-        {% if request.GET.price_min %}
-        {% if request.GET.q or request.GET.condition %}, {% endif %}
-        Мин. цена: {{ request.GET.price_min }} ₽
-        {% endif %}
-        {% if request.GET.price_max %}
-        {% if request.GET.q or request.GET.condition or request.GET.price_min %}, {% endif %}
-        Макс. цена: {{ request.GET.price_max }} ₽
-        {% endif %}
-        {% if request.GET.mileage_min %}
-        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max %}, {% endif %}
-        Мин. пробег: {{ request.GET.mileage_min }} км
-        {% endif %}
-        {% if request.GET.mileage_max %}
-        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min %}, {% endif %}
-        Макс. пробег: {{ request.GET.mileage_max }} км
-        {% endif %}
-        {% if request.GET.fuel_type %}
-        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max %}, {% endif %}
-        Тип топлива: {{ request.GET.fuel_type }}
-        {% endif %}
-        {% if request.GET.transmission %}
-        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max or request.GET.fuel_type %}, {% endif %}
-        Трансмиссия: {{ request.GET.transmission }}
-        {% endif %}
-        {% if request.GET.color %}
-        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max or request.GET.fuel_type or request.GET.transmission %}, {% endif %}
-        Цвет: {{ request.GET.color }}
-        {% endif %}
-        {% if request.GET.engine_capacity_min %}
-        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max or request.GET.fuel_type or request.GET.transmission or request.GET.color %}, {% endif %}
-        Мин. объём двигателя: {{ request.GET.engine_capacity_min }} л
-        {% endif %}
-        {% if request.GET.engine_capacity_max %}
-        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max or request.GET.fuel_type or request.GET.transmission or request.GET.color or request.GET.engine_capacity_min %}, {% endif %}
-        Макс. объём двигателя: {{ request.GET.engine_capacity_max }} л
-        {% endif %}
-        {% if request.GET.body_type %}
-        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max or request.GET.fuel_type or request.GET.transmission or request.GET.color or request.GET.engine_capacity_min or request.GET.engine_capacity_max %}, {% endif %}
-        Тип кузова: {{ request.GET.body_type }}
-        {% endif %}
-        {% if request.GET.drive_type %}
-        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max or request.GET.fuel_type or request.GET.transmission or request.GET.color or request.GET.engine_capacity_min or request.GET.engine_capacity_max or request.GET.body_type %}, {% endif %}
-        Привод: {{ request.GET.drive_type }}
-        {% endif %}
-        {% if request.GET.steering_wheel %}
-        {% if request.GET.q or request.GET.condition or request.GET.price_min or request.GET.price_max or request.GET.mileage_min or request.GET.mileage_max or request.GET.fuel_type or request.GET.transmission or request.GET.color or request.GET.engine_capacity_min or request.GET.engine_capacity_max or request.GET.body_type or request.GET.drive_type %}, {% endif %}
-        Руль: {{ request.GET.steering_wheel }}
-        {% endif %}
-        <a href="{% url 'car_list' %}" class="ml-2 hover:underline" style="color: var(--primary-color);">Сбросить фильтры</a>
+        {% endfor %}
+        <a href="{% url 'car_list' %}"
+           class="ml-2 hover:underline cursor-pointer bg-gray-200 border border-black px-3 py-1 rounded"
+           style="--primary-color: black; color: var(--primary-color);">
+            Сбросить фильтры
+        </a>
     </div>
     {% endif %}
 

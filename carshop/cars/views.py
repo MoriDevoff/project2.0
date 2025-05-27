@@ -48,6 +48,7 @@ def car_list(request):
 def car_search(request):
     cars = Car.objects.filter(is_sold=False).annotate(favorite_count=Count('favorites'))
     query = request.GET.get('q', '').strip()
+    year = request.GET.get('year')
     condition = request.GET.get('condition')
     price_min = request.GET.get('price_min')
     price_max = request.GET.get('price_max')
@@ -58,6 +59,14 @@ def car_search(request):
     color = request.GET.get('color')
     engine_capacity_min = request.GET.get('engine_capacity_min')
     engine_capacity_max = request.GET.get('engine_capacity_max')
+    body_type = request.GET.get('body_type')
+    power_min = request.GET.get('power_min')
+    power_max = request.GET.get('power_max')
+    drive_type = request.GET.get('drive_type')
+    weight_min = request.GET.get('weight_min')
+    weight_max = request.GET.get('weight_max')
+    country_of_origin = request.GET.get('country_of_origin')
+    vin = request.GET.get('vin')
 
     if query:
         search_terms = query.split()
@@ -66,9 +75,10 @@ def car_search(request):
             query_conditions |= Q(brand__icontains=term) | Q(model__icontains=term)
         cars = cars.filter(query_conditions)
 
+    if year:
+        cars = cars.filter(year__icontains=year)
     if condition and condition != "":
         cars = cars.filter(condition=condition)
-
     if price_min:
         try:
             cars = cars.filter(price__gte=float(price_min))
@@ -79,7 +89,6 @@ def car_search(request):
             cars = cars.filter(price__lte=float(price_max))
         except (ValueError, TypeError):
             pass
-
     if mileage_min:
         try:
             cars = cars.filter(mileage__gte=int(mileage_min))
@@ -90,16 +99,12 @@ def car_search(request):
             cars = cars.filter(mileage__lte=int(mileage_max))
         except (ValueError, TypeError):
             pass
-
     if fuel_type and fuel_type != "":
         cars = cars.filter(fuel_type=fuel_type)
-
     if transmission and transmission != "":
         cars = cars.filter(transmission=transmission)
-
     if color and color != "":
-        cars = cars.filter(color=color)
-
+        cars = cars.filter(color__icontains=color)
     if engine_capacity_min:
         try:
             cars = cars.filter(engine_capacity__gte=float(engine_capacity_min))
@@ -110,11 +115,40 @@ def car_search(request):
             cars = cars.filter(engine_capacity__lte=float(engine_capacity_max))
         except (ValueError, TypeError):
             pass
+    # CarSpecification фильтры
+    if body_type and body_type != "":
+        cars = cars.filter(carspecification__body_type=body_type)
+    if power_min:
+        try:
+            cars = cars.filter(carspecification__power__gte=int(power_min))
+        except (ValueError, TypeError):
+            pass
+    if power_max:
+        try:
+            cars = cars.filter(carspecification__power__lte=int(power_max))
+        except (ValueError, TypeError):
+            pass
+    if drive_type and drive_type != "":
+        cars = cars.filter(carspecification__drive_type=drive_type)
+    if weight_min:
+        try:
+            cars = cars.filter(carspecification__weight__gte=int(weight_min))
+        except (ValueError, TypeError):
+            pass
+    if weight_max:
+        try:
+            cars = cars.filter(carspecification__weight__lte=int(weight_max))
+        except (ValueError, TypeError):
+            pass
+    if country_of_origin and country_of_origin != "":
+        cars = cars.filter(carspecification__country_of_origin__icontains=country_of_origin)
+    if vin and vin != "":
+        cars = cars.filter(carspecification__vin__icontains=vin)
 
     unread_deals_count = get_unread_deals_count(request.user)
 
     for car in cars:
-        car.is_favorited = Favorite.objects.filter(car=car, user=request.user).exists()
+        car.is_favorited = request.user.is_authenticated and Favorite.objects.filter(car=car, user=request.user).exists()
 
     return render(request, 'car_list.html', {
         'cars': cars,
@@ -211,7 +245,7 @@ def register(request):
                 try:
                     send_mail(subject, message, from_email, [user.email], fail_silently=False)
                     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                        return JsonResponse({'success': True, 'message': 'Регистрация успешна! Проверьте вашу почту для подтверждения email.', 'redirect': reverse('login')})
+                        return JsonResponse({'success': True, 'message': 'Регистрация успешна! Проверьте вашу почту для подтверждения email.', 'redirect': reverse('login') + '?verify_email=1'})
                     messages.success(request, 'Регистрация успешна! Проверьте вашу почту для подтверждения email.')
                 except Exception as e:
                     user.delete()
@@ -226,7 +260,7 @@ def register(request):
 
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': True, 'redirect': reverse('login')})
-            return redirect(reverse('login'))
+            return redirect(reverse('login') + '?verify_email=1')
         else:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': False, 'error': form.errors.as_json()}, status=400)

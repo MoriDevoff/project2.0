@@ -1,6 +1,15 @@
 document.addEventListener('DOMContentLoaded', function () {
     console.log('site.js loaded'); // Отладка: проверяем, загружается ли файл
 
+    // Добавляем стили для стикеров
+    const style = document.createElement('style');
+    style.textContent = `
+        .sticker {
+            border: 2px solid black;
+        }
+    `;
+    document.head.appendChild(style);
+
     // 1. Кнопка "Наверх"
     const scrollToTopBtn = document.createElement('button');
     scrollToTopBtn.innerHTML = '↑ Наверх';
@@ -90,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+    const phoneRegex = /^\d{11}$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,}$/;
 
@@ -103,6 +112,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     document.querySelectorAll('input[type="password"]').forEach(input => {
-        validateInput(input, passwordRegex, 'Пароль должен содержать минимум 8 символов, включая буквы и цифры!');
+        if (!input.classList.contains('no-validate')) {
+            validateInput(input, passwordRegex, 'Пароль должен содержать минимум 8 символов, включая буквы и цифры!');
+        }
     });
 });

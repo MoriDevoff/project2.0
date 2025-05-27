@@ -29,7 +29,6 @@
             <td class="p-2 border" style="border-color: var(--border-color);">{{ car.price }} ₽</td>
             <td class="p-2 border" style="border-color: var(--border-color);">{{ car.user.username }}</td>
             <td class="p-2 border" style="border-color: var(--border-color);">
-                <button type="button" onclick="window.location.href='{% url 'edit_car' car.id %}'" class="edit-btn px-2 py-1 rounded-lg" style="background-color: var(--success-color); color: var(--btn-text);">Редактировать</button>
                 <form method="post" action="" style="display:inline;" onsubmit="return confirm('Удалить объявление?');">
                     {% csrf_token %}
                     <input type="hidden" name="car_id" value="{{ car.id }}">

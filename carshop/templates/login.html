@@ -13,7 +13,9 @@
             <div>
                 <label for="password" class="block text-sm sm:text-base font-medium" style="color: var(--secondary-color);">Пароль</label>
                 <div class="relative">
-                    <input type="password" name="password" id="password" required class="mt-1 block w-full p-2 sm:p-3 border rounded-md text-sm sm:text-base" style="border-color: var(--border-color);">
+                    <input type="password" name="password" id="password" required
+                           class="mt-1 block w-full p-2 sm:p-3 border rounded-md text-sm sm:text-base no-validate"
+                           style="border-color: var(--border-color);">
                     <a type="button" id="togglePassword"
                        class="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer group"
                        style="color: var(--secondary-color);">
@@ -47,11 +49,6 @@
                 Регистрация
             </a>
         </div>
-        {% if messages %}
-        {% for message in messages %}
-        <p class="mt-4 text-center text-sm sm:text-base" style="color: var(--error-color);">{{ message }}</p>
-        {% endfor %}
-        {% endif %}
     </form>
 </div>
 
