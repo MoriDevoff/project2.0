@@ -17,13 +17,15 @@
     <form method="post" id="purchaseForm" class="space-y-6">
         {% csrf_token %}
         {% for field in form %}
-        <div>
-            <label class="block font-medium text-sm md:text-base" style="color: var(--text-color);">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-            <p class="text-red-600 text-sm mt-1">{{ field.errors.as_text }}</p>
+            {% if field.name == 'offered_price' %}
+            <div>
+                <label class="block font-medium text-sm md:text-base" style="color: var(--text-color);">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ field.errors.as_text }}</p>
+                {% endif %}
+            </div>
             {% endif %}
-        </div>
         {% endfor %}
         {% if form.non_field_errors %}
         <div class="text-red-600 text-sm mt-1">

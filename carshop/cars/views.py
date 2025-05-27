@@ -21,6 +21,20 @@ from django.db import transaction
 
 logger = logging.getLogger(__name__)
 
+def set_cookie(response, name, value, days=1/24):
+    """Установка куки с указанным сроком действия."""
+    if days:
+        max_age = int(days * 24 * 60 * 60)  # Конвертируем дни в секунды
+        expires = timezone.now() + timedelta(days=days)
+    else:
+        max_age = None
+        expires = None
+    response.set_cookie(name, value, max_age=max_age, expires=expires, path='/')
+
+def get_cookie(request, name):
+    """Получение значения куки."""
+    return request.COOKIES.get(name)
+
 def get_unread_deals_count(user):
     """Вспомогательная функция для подсчёта непрочитанных уведомлений."""
     if not user.is_authenticated:
