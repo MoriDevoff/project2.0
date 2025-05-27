@@ -146,7 +146,8 @@
             Удалить объявление
         </a>
         {% elif not car.is_sold %}
-        <a href="{% url 'purchase_car' car.id %}" class="inline-block px-3 sm:px-4 py-1 sm:py-2 rounded-lg hover:bg-opacity-80 transition-colors text-sm sm:text-base">
+        <a href="{% url 'purchase_car' car.id %}"
+           class="inline-block px-3 sm:px-4 py-1 sm:py-2 rounded-lg border border-black hover:bg-opacity-80 transition-colors text-sm sm:text-base bg-green-500 text-white">
             Купить <i class="fas fa-shopping-cart ml-2"></i>
         </a>
         {% endif %}
